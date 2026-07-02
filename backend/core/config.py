@@ -8,7 +8,7 @@ from typing import Mapping, Optional
 
 from pydantic import BaseModel, Field
 
-from backend.utils.storage import get_initial_data_dir, get_writable_base_dir
+from backend.utils.storage import get_initial_data_dir, get_writable_base_dir, secure_write_text
 
 
 def _load_env_file(path: Path) -> dict[str, str]:
@@ -61,6 +61,18 @@ def _read_int_env(env: Mapping[str, str], *names: str, default: int) -> int:
         return default
 
 
+def _read_bool_env(env: Mapping[str, str], *names: str, default: bool) -> bool:
+    raw = _read_env(env, *names)
+    if raw is None:
+        return default
+    normalized_value = raw.strip().lower()
+    if normalized_value in {"1", "true", "yes", "on"}:
+        return True
+    if normalized_value in {"0", "false", "no", "off"}:
+        return False
+    return default
+
+
 def _read_path_env(env: Mapping[str, str], *names: str) -> Optional[Path]:
     raw = _read_env(env, *names)
     if raw is None:
@@ -90,7 +102,7 @@ def get_default_secret_key(env: Optional[Mapping[str, str]] = None) -> str:
 
     generated = secrets.token_urlsafe(48)
     try:
-        secret_file.write_text(generated, encoding="utf-8")
+        secure_write_text(secret_file, generated)
     except OSError:
         pass
     return generated
@@ -105,6 +117,7 @@ class Settings(BaseModel):
     )
     secret_key: str = Field(default_factory=get_default_secret_key)
     access_token_expire_hours: int = 12
+    trust_proxy_headers: bool = False
     timezone: str = "Asia/Hong_Kong"
     data_dir: Path = Field(default_factory=get_initial_data_dir)
     db_path: Optional[Path] = None
@@ -129,6 +142,11 @@ class Settings(BaseModel):
                 env,
                 "APP_ACCESS_TOKEN_EXPIRE_HOURS",
                 default=12,
+            ),
+            trust_proxy_headers=_read_bool_env(
+                env,
+                "APP_TRUST_PROXY_HEADERS",
+                default=False,
             ),
             timezone=_read_env(env, "TZ", "APP_TIMEZONE", default="Asia/Hong_Kong"),
             data_dir=_read_path_env(env, "APP_DATA_DIR") or get_initial_data_dir(),

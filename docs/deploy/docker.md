@@ -4,10 +4,11 @@
 
 | 触发条件 | 镜像标签 | 用途 |
 |----------|----------|------|
-| 分支推送 | `ghcr.io/<owner>/tg-signpulse:test-<branch>` | 测试 |
-| 分支推送 | `ghcr.io/<owner>/tg-signpulse:test-<short-sha>` | 精确回溯 |
+| main 分支推送 | `ghcr.io/<owner>/tg-signpulse:test-main` | 测试 |
+| main 分支推送 | `ghcr.io/<owner>/tg-signpulse:test-<short-sha>` | 精确回溯 |
 | Git 标签 `v*` | `ghcr.io/<owner>/tg-signpulse:vX.Y.Z` | 生产 |
 | Git 标签 `v*` | `ghcr.io/<owner>/tg-signpulse:latest` | 生产（滚动） |
+| Pull Request | 仅构建验证，不推送镜像 | CI 检查 |
 
 ## 快速部署
 
@@ -68,10 +69,10 @@ docker compose up -d
 
 ### 本地源码构建
 
-仓库根目录已提供 `docker-compose.yml`，默认本地构建：
+仓库根目录的 `docker-compose.yml` 默认使用 GHCR 镜像。如果需要从当前源码构建本地镜像，可以直接运行：
 
 ```bash
-docker compose up -d --build
+docker build -t tg-signpulse:local .
 ```
 
 ## 端口与健康检查
@@ -224,4 +225,4 @@ SQLite 已配置 WAL 模式和 30 秒超时。如果仍然出现锁定：
 
 1. 确认没有多个容器实例挂载同一个 `/data`
 2. 检查磁盘空间是否充足
-3. 考虑增大 `TG_GLOBAL_CONCURRENCY`（默认 1）
+3. 保持默认或降低 `TG_GLOBAL_CONCURRENCY`（默认 1），避免提高并发后加重 SQLite 锁竞争

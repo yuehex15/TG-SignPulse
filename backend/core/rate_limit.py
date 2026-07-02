@@ -8,6 +8,8 @@ from typing import Deque, Dict, Tuple
 
 from fastapi import HTTPException, Request, status
 
+from backend.core.config import get_settings
+
 BucketKey = Tuple[str, str]
 
 
@@ -71,15 +73,16 @@ class InMemoryRateLimiter:
 
 
 def get_client_identifier(request: Request) -> str:
-    forwarded_for = request.headers.get("x-forwarded-for", "")
-    if forwarded_for:
-        first_hop = forwarded_for.split(",", 1)[0].strip()
-        if first_hop:
-            return first_hop
+    if get_settings().trust_proxy_headers:
+        forwarded_for = request.headers.get("x-forwarded-for", "")
+        if forwarded_for:
+            first_hop = forwarded_for.split(",", 1)[0].strip()
+            if first_hop:
+                return first_hop
 
-    real_ip = request.headers.get("x-real-ip", "").strip()
-    if real_ip:
-        return real_ip
+        real_ip = request.headers.get("x-real-ip", "").strip()
+        if real_ip:
+            return real_ip
 
     if request.client and request.client.host:
         return request.client.host

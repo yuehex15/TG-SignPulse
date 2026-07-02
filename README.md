@@ -4,8 +4,8 @@
 
 <h1 align="center">TG-SignPulse</h1>
 
-> [!CAUTION]
-> **⚠️ v2.0 升级须知：** 由于架构改动较大（支持一个任务关联多个账号等），本版本未对老版本数据做完整兼容。升级前请 **清空 `data/` 目录后重新部署**，避免数据异常。如需保留旧数据请先备份。
+> [!NOTE]
+> **v1.0.0 首版说明：** 当前版本作为 TG-SignPulse 的首个正式版本发布。首次部署请准备全新的 `data/` 数据目录；如从其他分支或旧数据迁移，请先完整备份。
 
 <p align="center">
   <strong>Telegram 多账号自动化管理面板</strong><br>
@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/yuehex15/tg-signpulse/releases"><img src="https://img.shields.io/badge/version-v2.0.1-blue" alt="Version"></a>
+  <a href="https://github.com/yuehex15/tg-signpulse/releases"><img src="https://img.shields.io/badge/version-v1.0.0-blue" alt="Version"></a>
   <a href="https://github.com/yuehex15/tg-signpulse/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-BSD--3--Clause-green" alt="License"></a>
   <img src="https://img.shields.io/badge/python-3.10--3.13-blue" alt="Python">
   <img src="https://img.shields.io/badge/node-20+-green" alt="Node.js">
@@ -217,20 +217,15 @@ curl http://127.0.0.1:8080/readyz    # 服务就绪检查
 
 ## 更新日志
 
-### v2.0.1 (2026-05-16)
+### v1.0.0 (2026-05-16)
+
+**版本化管理**：从本版本开始采用语义化版本号。
 
 **Bug 修复**
 - 修复扫码登录成功后弹窗卡在"处理中..."的问题（后端返回 `password_required` 状态前端未正确匹配、密码提交成功后未检查返回值仍继续轮询已清理的 session）
 - 修复任务编排页面点击"查看日志"后弹窗无法显示历史日志的问题（多账号任务 `account_name` 为空字符串导致后端查询失败）
 - 修复任务编排页面不显示任务对象（机器人）头像的问题（`account_names` 包含通配符 `*` 时未正确解析为实际账号名）
 - 修复编辑/删除/执行多账号任务时 `account_name` 传空导致操作失败的问题
-
-**文档**
-- README 顶部添加 v2.0 升级兼容性警告提示
-
-### v2.0.0 (2026-05-15)
-
-**版本化管理**：从本版本开始采用语义化版本号。
 
 **代码质量**
 - 全面清理 DEBUG print 语句，替换为结构化 logging

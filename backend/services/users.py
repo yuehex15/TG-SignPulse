@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from backend.core.config import get_settings
 from backend.core.security import hash_password
 from backend.models.user import User
+from backend.utils.storage import secure_write_text
 
 logger = logging.getLogger("backend.users")
 
@@ -31,7 +32,7 @@ def _get_or_create_bootstrap_password() -> tuple[str, Path]:
         pass
 
     password = secrets.token_urlsafe(12)
-    password_file.write_text(password, encoding="utf-8")
+    secure_write_text(password_file, password)
     return password, password_file
 
 

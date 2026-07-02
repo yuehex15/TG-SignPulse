@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from backend.core import auth as auth_core
 from backend.core.auth import authenticate_user, create_access_token, verify_totp
 from backend.core.database import get_db
-from backend.core.rate_limit import compose_rate_limit_key, get_rate_limiter
+from backend.core.rate_limit import compose_rate_limit_key, get_client_identifier, get_rate_limiter
 from backend.core.security import verify_password
 from backend.models.login_log import LoginLog
 from backend.models.user import User
@@ -27,19 +27,7 @@ RESET_TOTP_RATE_LIMIT_DETAIL = (
 
 
 def _resolve_request_ip(request: Request) -> str:
-    forwarded_for = request.headers.get("x-forwarded-for", "")
-    if forwarded_for:
-        first_hop = forwarded_for.split(",", 1)[0].strip()
-        if first_hop:
-            return first_hop
-
-    real_ip = request.headers.get("x-real-ip", "").strip()
-    if real_ip:
-        return real_ip
-
-    if request.client and request.client.host:
-        return request.client.host
-    return ""
+    return get_client_identifier(request)
 
 
 def _append_login_log(

@@ -15,7 +15,7 @@
 
 | 环境 | 镜像 |
 |------|------|
-| 生产 | `ghcr.io/yuehex15/tg-signpulse:latest` 或 `ghcr.io/yuehex15/tg-signpulse:v2.0.0` |
+| 生产 | `ghcr.io/yuehex15/tg-signpulse:latest` 或 `ghcr.io/yuehex15/tg-signpulse:v1.0.0` |
 | 测试 | `ghcr.io/yuehex15/tg-signpulse:test-main` |
 
 ## 3. 最小启动

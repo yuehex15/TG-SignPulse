@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from backend.core.config import get_settings
+from backend.utils.storage import secure_write_text
 from backend.utils.time import utc_now_iso
 
 _SESSION_MODE_ENV = "TG_SESSION_MODE"
@@ -92,9 +93,7 @@ def _load_account_store() -> dict:
 def _save_account_store(data: dict) -> None:
     path = _account_store_path()
     tmp_path = path.with_suffix(".json.tmp")
-    tmp_path.write_text(
-        json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    secure_write_text(tmp_path, json.dumps(data, ensure_ascii=False, indent=2))
     tmp_path.replace(path)
 
 
@@ -327,7 +326,7 @@ def _export_session_string_from_file(session_dir: Path, account_name: str) -> Op
         # Cache it to .session_string file for future use
         try:
             cache_path = session_string_file_path(session_dir, account_name)
-            cache_path.write_text(session_string, encoding="utf-8")
+            secure_write_text(cache_path, session_string)
         except Exception:
             pass
 
@@ -340,7 +339,7 @@ def save_session_string_file(
     session_dir: Path, account_name: str, session_string: str
 ) -> None:
     path = session_string_file_path(session_dir, account_name)
-    path.write_text(session_string.strip(), encoding="utf-8")
+    secure_write_text(path, session_string.strip())
 
 
 def delete_session_string_file(session_dir: Path, account_name: str) -> None:

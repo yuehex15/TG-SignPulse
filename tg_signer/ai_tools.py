@@ -81,6 +81,8 @@ class OpenAIConfigManager:
         config = OpenAIConfig(api_key=api_key, base_url=base_url, model=model)
         with open(config_file, "w", encoding="utf-8") as fp:
             json.dump(config, fp, ensure_ascii=False, indent=2)
+        if os.name == "posix":
+            config_file.chmod(0o600)
 
     def load_config(self) -> Optional[OpenAIConfig]:
         # 环境变量优先

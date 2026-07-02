@@ -465,6 +465,8 @@ class Client(BaseClient):
     async def save_session_string(self):
         with open(self.session_string_file, "w") as fp:
             fp.write(await self.export_session_string())
+        if os.name == "posix":
+            self.session_string_file.chmod(0o600)
 
     def load_session_string(self):
         logger.info("Loading session_string from local file.")

@@ -2,13 +2,40 @@ from __future__ import annotations
 
 import logging
 import os
+import json
 import tempfile
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 _BASE_DIR: Optional[Path] = None
 _DATA_DIR_OVERRIDE_FILE_ENV = "APP_DATA_DIR_OVERRIDE_FILE"
 _DEFAULT_DATA_DIR_OVERRIDE_FILE = Path.cwd() / ".tg_signpulse_data_dir"
+
+
+def restrict_file_permissions(path: Path) -> None:
+    """Best-effort restriction for files containing credentials or tokens."""
+    if os.name == "posix":
+        try:
+            path.chmod(0o600)
+        except OSError:
+            logging.getLogger("backend.storage").warning(
+                "Failed to restrict permissions for %s", path
+            )
+
+
+def secure_write_text(path: Path, content: str, *, encoding: str = "utf-8") -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding=encoding)
+    restrict_file_permissions(path)
+
+
+def secure_write_json(path: Path, payload: Any, *, indent: int = 2) -> None:
+    secure_write_text(
+        path,
+        json.dumps(payload, ensure_ascii=False, indent=indent),
+        encoding="utf-8",
+    )
+
 
 def _probe_writable_dir(base: Path) -> bool:
     probe_dir = base / ".probe"

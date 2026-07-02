@@ -16,6 +16,7 @@ from backend.utils.storage import (
     is_writable_dir,
     load_data_dir_override,
     save_data_dir_override,
+    secure_write_json,
 )
 
 settings = get_settings()
@@ -145,8 +146,7 @@ class ConfigService:
         config_file = task_dir / "config.json"
 
         try:
-            with open(config_file, "w", encoding="utf-8") as f:
-                json.dump(config, f, ensure_ascii=False, indent=2)
+            secure_write_json(config_file, config)
             return True
         except OSError:
             return False
@@ -518,8 +518,7 @@ class ConfigService:
         config_file = self._get_ai_config_file()
 
         try:
-            with open(config_file, "w", encoding="utf-8") as f:
-                json.dump(config, f, ensure_ascii=False, indent=2)
+            secure_write_json(config_file, config)
             return True
         except OSError:
             return False

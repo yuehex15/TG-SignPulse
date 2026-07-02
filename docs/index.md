@@ -68,8 +68,7 @@ TG-SignPulse 不是单一脚本，而是一套可长期维护的 Telegram 自动
 ## 本地预览文档
 
 ```bash
-cd docs
-npm install
+npm ci
 npm run docs:dev
 ```
 

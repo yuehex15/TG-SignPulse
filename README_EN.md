@@ -4,8 +4,8 @@
 
 <h1 align="center">TG-SignPulse</h1>
 
-> [!CAUTION]
-> **⚠️ v2.0 Upgrade Notice:** Due to significant architectural changes (multi-account task support, etc.), this version is NOT fully backward-compatible with older data. Please **clear your `data/` directory and redeploy** before upgrading. Back up your data first if needed.
+> [!NOTE]
+> **v1.0.0 First Release:** This is the first official TG-SignPulse release. For a fresh deployment, use a clean `data/` directory. If you are migrating from another branch or older data, back up your data first.
 
 <p align="center">
   <strong>Telegram Multi-Account Automation Panel</strong><br>
@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/yuehex15/tg-signpulse/releases"><img src="https://img.shields.io/badge/version-v2.0.1-blue" alt="Version"></a>
+  <a href="https://github.com/yuehex15/tg-signpulse/releases"><img src="https://img.shields.io/badge/version-v1.0.0-blue" alt="Version"></a>
   <a href="https://github.com/yuehex15/tg-signpulse/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-BSD--3--Clause-green" alt="License"></a>
   <img src="https://img.shields.io/badge/python-3.10--3.13-blue" alt="Python">
   <img src="https://img.shields.io/badge/node-20+-green" alt="Node.js">
@@ -215,9 +215,15 @@ curl http://127.0.0.1:8080/readyz    # Readiness check
 
 ## Changelog
 
-### v2.0.0 (2026-05-15)
+### v1.0.0 (2026-05-16)
 
 **Versioned releases**: Starting from this version, the project uses semantic versioning.
+
+**Bug Fixes**
+- Fixed QR login getting stuck on "processing..." after a successful scan.
+- Fixed task log modal not showing historical logs after clicking "View Logs".
+- Fixed missing target chat avatars for multi-account tasks using the `*` wildcard.
+- Fixed edit/delete/run failures for multi-account tasks when `account_name` was empty.
 
 **Code Quality**
 - Replaced all DEBUG print statements with structured logging
