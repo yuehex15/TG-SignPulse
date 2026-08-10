@@ -2885,7 +2885,7 @@ class SignTaskService:
         try:
             # 初始化账号锁（跨服务共享）
             if account_name not in self._account_locks:
-                self._account_locks[account_name] = get_account_lock(account_name)
+                self._account_locks[account_name] = await get_account_lock(account_name)
 
             account_lock = self._account_locks[account_name]
 
@@ -3233,7 +3233,7 @@ class SignTaskService:
 
         # 初始化账号锁（跨服务共享）
         if account_name not in self._account_locks:
-            self._account_locks[account_name] = get_account_lock(account_name)
+            self._account_locks[account_name] = await get_account_lock(account_name)
 
         account_lock = self._account_locks[account_name]
 

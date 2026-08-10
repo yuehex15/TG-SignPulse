@@ -1367,7 +1367,7 @@ class KeywordMonitorService:
         )
 
         await self._warm_chat(client, target_chat_id)
-        lock = get_account_lock(account_name)
+        lock = await get_account_lock(account_name)
         async with lock:
             rendered_actions = [
                 _render_action_templates(raw_action, variables)
@@ -1713,7 +1713,7 @@ class KeywordMonitorService:
                             )
                         continue
 
-                lock = get_account_lock(account_name)
+                lock = await get_account_lock(account_name)
                 async with lock:
                     client_key = str(session_dir.joinpath(account_name).resolve())
                     existing = _CLIENT_INSTANCES.get(client_key)
@@ -1791,7 +1791,7 @@ class KeywordMonitorService:
                 active=False,
             )
         for account_name, client, handler_ref in self._handler_refs:
-            lock = get_account_lock(account_name)
+            lock = await get_account_lock(account_name)
             async with lock:
                 try:
                     client.remove_handler(*handler_ref)

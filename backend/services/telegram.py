@@ -301,7 +301,7 @@ class TelegramService:
                 no_updates=True,
             )
 
-            lock = get_account_lock(account_name)
+            lock = await get_account_lock(account_name)
             async with lock:
                 async with client:
                     me = await asyncio.wait_for(client.get_me(), timeout=10)
@@ -370,7 +370,7 @@ class TelegramService:
                 no_updates=True,
             )
 
-            lock = get_account_lock(account_name)
+            lock = await get_account_lock(account_name)
             async with lock:
                 async with client:
                     chat = await asyncio.wait_for(
@@ -493,7 +493,7 @@ class TelegramService:
 
         try:
             # Reuse shared clients and avoid context-manager disconnect on each refresh.
-            lock = get_account_lock(account_name)
+            lock = await get_account_lock(account_name)
             async with lock:
                 if not getattr(client, "is_connected", False):
                     await client.connect()
@@ -747,8 +747,8 @@ class TelegramService:
             {actual_account_name, new_account_name},
             key=lambda value: value.lower(),
         )
-        first_lock = get_account_lock(ordered_names[0])
-        second_lock = get_account_lock(ordered_names[-1])
+        first_lock = await get_account_lock(ordered_names[0])
+        second_lock = await get_account_lock(ordered_names[-1])
 
         from tg_signer.core import close_client_by_name
 
@@ -838,7 +838,7 @@ class TelegramService:
 
         from tg_signer.core import close_client_by_name
 
-        account_lock = get_account_lock(account_name)
+        account_lock = await get_account_lock(account_name)
         session_mode = get_session_mode()
         global_semaphore = get_global_semaphore()
 
@@ -1393,7 +1393,7 @@ class TelegramService:
 
         from tg_signer.core import close_client_by_name
 
-        account_lock = get_account_lock(account_name)
+        account_lock = await get_account_lock(account_name)
         session_mode = get_session_mode()
         global_semaphore = get_global_semaphore()
 

@@ -216,17 +216,21 @@ if assets_dir.is_dir():
 @app.get("/{full_path:path}")
 async def serve_spa(full_path: str):
     """SPA fallback: non-API routes serve built frontend files or index.html."""
-    file_path = web_dir / full_path
+    # Path traversal guard: reject any path containing ".." segments outright.
+    if ".." in full_path:
+        return Response(content="Not Found", status_code=status.HTTP_404_NOT_FOUND)
+
+    file_path = (web_dir / full_path).resolve()
 
     if file_path.exists() and file_path.is_file():
         return FileResponse(file_path)
 
     # Legacy static export compatibility (.html pages)
-    html_path = web_dir / f"{full_path}.html"
+    html_path = (web_dir / f"{full_path}.html").resolve()
     if html_path.exists() and html_path.is_file():
         return FileResponse(html_path)
 
-    index_path = web_dir / "index.html"
+    index_path = (web_dir / "index.html").resolve()
     if index_path.exists():
         return FileResponse(index_path)
 

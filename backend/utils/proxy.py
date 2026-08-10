@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import re
 from typing import Optional
 from urllib.parse import urlparse
+
+# IPv6 literal inside brackets, e.g. [::1]:8080 or socks5://[::1]:1080
+_IPV6_BRACKETED = re.compile(r"^\[([0-9a-fA-F:.]+)\](?::(\d+))?$")
 
 
 def normalize_proxy_url(raw: str) -> str:
@@ -12,6 +16,15 @@ def normalize_proxy_url(raw: str) -> str:
         return value
     if "@" in value:
         return f"socks5://{value}"
+    # Bracketed IPv6 literal, e.g. [::1]:8080
+    ipv6_match = _IPV6_BRACKETED.match(value)
+    if ipv6_match:
+        host, port = ipv6_match.groups()
+        suffix = f":{port}" if port else ""
+        return f"socks5://[{host}]{suffix}"
+    # Bare IPv6 literal without brackets and without port, e.g. ::1
+    if value.count(":") > 1 and "]" not in value:
+        return f"socks5://[{value}]"
     parts = value.split(":")
     if len(parts) == 2:
         host, port = parts
