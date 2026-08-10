@@ -63,7 +63,7 @@ class TestPathTraversal:
         """
         with tempfile.TemporaryDirectory() as d:
             web_dir = Path(d) / "web"
-            client, secret = self._make_client(web_dir)
+            client, _ = self._make_client(web_dir)
             with client:
                 res = client.get("/../../secret.txt")
                 # Must NOT return the secret content
@@ -77,7 +77,7 @@ class TestPathTraversal:
         """URL-encoded traversal should also be blocked."""
         with tempfile.TemporaryDirectory() as d:
             web_dir = Path(d) / "web"
-            client, secret = self._make_client(web_dir)
+            client, _ = self._make_client(web_dir)
             with client:
                 res = client.get("/%2e%2e%2f%2e%2e%2fsecret.txt")
                 assert "TOP-SECRET-DATA" not in res.text
