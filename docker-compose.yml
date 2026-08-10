@@ -11,7 +11,7 @@ services:
       - APP_DATA_DIR=/data
       - TZ=Asia/Shanghai
       # Required in production: set a strong random secret
-      - APP_SECRET_KEY=${APP_SECRET_KEY:-change-me-please-use-openssl-rand}
+      - APP_SECRET_KEY=${APP_SECRET_KEY:-}
       # Optional: first-boot admin password (otherwise written to data/.admin_bootstrap_password)
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
     init: true
