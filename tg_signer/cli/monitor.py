@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from typing import Optional
 
 import click
 from click import Group
@@ -11,7 +10,7 @@ from .signer import tg_signer
 
 
 def get_monitor(
-    task_name, ctx_obj: dict, loop: Optional[asyncio.AbstractEventLoop] = None
+    task_name, ctx_obj: dict, loop: asyncio.AbstractEventLoop | None = None
 ):
     monitor = UserMonitor(
         task_name=task_name,

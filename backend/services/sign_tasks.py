@@ -13,9 +13,10 @@ import re
 import time
 import traceback
 import uuid
+from collections.abc import Iterable
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any
 
 from backend.core.config import get_settings
 from backend.utils.account_locks import get_account_lock
@@ -54,7 +55,7 @@ class TaskLogHandler(logging.Handler):
     自定义日志处理器，将日志实时写入到内存列表中
     """
 
-    def __init__(self, log_list: List[str]):
+    def __init__(self, log_list: list[str]):
         super().__init__()
         self.log_list = log_list
 
@@ -132,15 +133,15 @@ class SignTaskService:
         _service_logger.info(
             "SignTaskService initialized, signs_dir=%s", self.signs_dir
         )
-        self._active_logs: Dict[tuple[str, str], List[str]] = {}  # (account, task) -> logs
-        self._active_tasks: Dict[tuple[str, str], bool] = {}  # (account, task) -> running
-        self._cleanup_tasks: Dict[tuple[str, str], asyncio.Task] = {}
-        self._run_statuses: Dict[tuple[str, str], Dict[str, Any]] = {}
-        self._run_status_cleanup_tasks: Dict[tuple[str, str], asyncio.Task] = {}
-        self._background_run_tasks: Dict[tuple[str, str], asyncio.Task] = {}
+        self._active_logs: dict[tuple[str, str], list[str]] = {}  # (account, task) -> logs
+        self._active_tasks: dict[tuple[str, str], bool] = {}  # (account, task) -> running
+        self._cleanup_tasks: dict[tuple[str, str], asyncio.Task] = {}
+        self._run_statuses: dict[tuple[str, str], dict[str, Any]] = {}
+        self._run_status_cleanup_tasks: dict[tuple[str, str], asyncio.Task] = {}
+        self._background_run_tasks: dict[tuple[str, str], asyncio.Task] = {}
         self._tasks_cache = None  # 内存缓存
-        self._account_locks: Dict[str, asyncio.Lock] = {}  # 账号锁
-        self._account_last_run_end: Dict[str, float] = {}  # 账号最后一次结束时间
+        self._account_locks: dict[str, asyncio.Lock] = {}  # 账号锁
+        self._account_last_run_end: dict[str, float] = {}  # 账号最后一次结束时间
         self._account_cooldown_seconds = int(
             os.getenv("SIGN_TASK_ACCOUNT_COOLDOWN", "5")
         )
@@ -193,7 +194,7 @@ class SignTaskService:
             )
 
     @staticmethod
-    def _task_requires_updates(task_config: Optional[Dict[str, Any]]) -> bool:
+    def _task_requires_updates(task_config: dict[str, Any] | None) -> bool:
         """
         判断任务是否依赖 update handlers。
         """
@@ -221,7 +222,7 @@ class SignTaskService:
         return False
 
     @staticmethod
-    def _task_has_keyword_monitor(task_config: Optional[Dict[str, Any]]) -> bool:
+    def _task_has_keyword_monitor(task_config: dict[str, Any] | None) -> bool:
         if not isinstance(task_config, dict):
             return False
         for chat in task_config.get("chats") or []:
@@ -238,7 +239,7 @@ class SignTaskService:
         return False
 
     @staticmethod
-    def _message_matches_thread(message: Any, chat_config: Dict[str, Any]) -> bool:
+    def _message_matches_thread(message: Any, chat_config: dict[str, Any]) -> bool:
         if message is None:
             return False
         raw_thread_id = chat_config.get("message_thread_id")
@@ -265,13 +266,13 @@ class SignTaskService:
             return text
 
         reply_markup = getattr(message, "reply_markup", None)
-        button_rows: List[str] = []
+        button_rows: list[str] = []
         if reply_markup is not None:
             inline_keyboard = getattr(reply_markup, "inline_keyboard", None)
             reply_keyboard = getattr(reply_markup, "keyboard", None)
             rows = inline_keyboard or reply_keyboard or []
             for row in rows:
-                row_texts: List[str] = []
+                row_texts: list[str] = []
                 for button in row or []:
                     button_text = str(
                         getattr(button, "text", None) or button or ""
@@ -329,7 +330,7 @@ class SignTaskService:
     async def _fetch_last_target_message_from_chat_history(
         self,
         signer: BackendUserSigner,
-        task_config: Optional[Dict[str, Any]],
+        task_config: dict[str, Any] | None,
     ) -> str:
         if signer is None or not isinstance(task_config, dict):
             return ""
@@ -413,7 +414,7 @@ class SignTaskService:
         if not self.run_history_dir.exists():
             return
 
-        limit = datetime.now() - timedelta(days=3)
+        limit = datetime.now() - timedelta(days=3)  # noqa: DTZ005 - naive local .timestamp() round-trips correctly
         for log_file in self.run_history_dir.glob("*.json"):
             if log_file.stat().st_mtime < limit.timestamp():
                 try:
@@ -452,7 +453,7 @@ class SignTaskService:
         target.parent.mkdir(parents=True, exist_ok=True)
         source.replace(target)
 
-    def _known_account_names(self) -> List[str]:
+    def _known_account_names(self) -> list[str]:
         names = set()
         try:
             names.update(name for name in list_account_names() if name)
@@ -471,7 +472,7 @@ class SignTaskService:
         return sorted(names)
 
     def _infer_account_name(
-        self, config: Dict[str, Any], task_dir: Optional[Path] = None
+        self, config: dict[str, Any], task_dir: Path | None = None
     ) -> str:
         account_name = config.get("account_name")
         if isinstance(account_name, str) and account_name.strip():
@@ -488,8 +489,8 @@ class SignTaskService:
         return ""
 
     def _resolve_task_dir(
-        self, task_name: str, account_name: Optional[str] = None
-    ) -> Optional[Path]:
+        self, task_name: str, account_name: str | None = None
+    ) -> Path | None:
         task_name = validate_storage_name(task_name, field_name="task_name")
         if account_name:
             account_name = validate_storage_name(account_name, field_name="account_name")
@@ -525,12 +526,12 @@ class SignTaskService:
 
     @staticmethod
     def _normalize_account_names(
-        account_names: Optional[Iterable[str]] = None,
-        account_name: Optional[str] = None,
-    ) -> List[str]:
-        ordered: List[str] = []
+        account_names: Iterable[str] | None = None,
+        account_name: str | None = None,
+    ) -> list[str]:
+        ordered: list[str] = []
 
-        def _append(value: Optional[str]) -> None:
+        def _append(value: str | None) -> None:
             if not isinstance(value, str):
                 return
             # Preserve wildcard marker
@@ -548,7 +549,7 @@ class SignTaskService:
         _append(account_name)
         return ordered
 
-    def _expand_account_names(self, account_names: List[str]) -> List[str]:
+    def _expand_account_names(self, account_names: list[str]) -> list[str]:
         """Expand wildcard '*' to all currently registered accounts."""
         if "*" in account_names:
             all_accounts = list_account_names()
@@ -567,7 +568,7 @@ class SignTaskService:
             return
 
         # Scan all existing task configs looking for wildcard
-        seen_wildcard_tasks: List[tuple] = []  # (task_name, config, source_dir)
+        seen_wildcard_tasks: list[tuple] = []  # (task_name, config, source_dir)
         for account_dir in self.signs_dir.iterdir():
             if not account_dir.is_dir():
                 continue
@@ -606,10 +607,10 @@ class SignTaskService:
 
     def _resolve_account_names_from_config(
         self,
-        config: Dict[str, Any],
-        task_dir: Optional[Path] = None,
-        resolved_account_name: Optional[str] = None,
-    ) -> List[str]:
+        config: dict[str, Any],
+        task_dir: Path | None = None,
+        resolved_account_name: str | None = None,
+    ) -> list[str]:
         names = self._normalize_account_names(config.get("account_names"))
         if names:
             return names
@@ -618,8 +619,8 @@ class SignTaskService:
 
     @staticmethod
     def _select_latest_last_run(
-        current: Optional[Dict[str, Any]], candidate: Optional[Dict[str, Any]]
-    ) -> Optional[Dict[str, Any]]:
+        current: dict[str, Any] | None, candidate: dict[str, Any] | None
+    ) -> dict[str, Any] | None:
         if not candidate:
             return current
         if not current:
@@ -629,7 +630,7 @@ class SignTaskService:
         return candidate if candidate_time > current_time else current
 
     @staticmethod
-    def _task_group_key(task: Dict[str, Any]) -> str:
+    def _task_group_key(task: dict[str, Any]) -> str:
         group_id = str(task.get("task_group_id") or "").strip()
         if group_id:
             return f"group:{group_id}"
@@ -642,20 +643,20 @@ class SignTaskService:
         *,
         task_name: str,
         primary_account_name: str,
-        account_names: List[str],
+        account_names: list[str],
         sign_at: str,
-        chats: List[Dict[str, Any]],
+        chats: list[dict[str, Any]],
         random_seconds: int,
         sign_interval: int,
         enabled: bool = True,
-        last_run: Optional[Dict[str, Any]] = None,
+        last_run: dict[str, Any] | None = None,
         execution_mode: str = "fixed",
         range_start: str = "",
         range_end: str = "",
         notify_on_failure: bool = True,
         task_group_id: str = "",
         last_run_account_name: str = "",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         normalized_accounts = self._normalize_account_names(
             account_names, primary_account_name
         )
@@ -679,10 +680,10 @@ class SignTaskService:
             "last_run_account_name": last_run_account_name,
         }
 
-    def _aggregate_tasks(self, tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        grouped: Dict[str, Dict[str, Any]] = {}
+    def _aggregate_tasks(self, tasks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        grouped: dict[str, dict[str, Any]] = {}
 
-        def _first_real_account(names: List[str], fallback: str = "") -> str:
+        def _first_real_account(names: list[str], fallback: str = "") -> str:
             for n in names:
                 if n and n != "*":
                     return n
@@ -735,8 +736,8 @@ class SignTaskService:
         )
 
     def _find_related_task_infos(
-        self, task_name: str, account_name: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+        self, task_name: str, account_name: str | None = None
+    ) -> list[dict[str, Any]]:
         raw_tasks = self.list_tasks(force_refresh=True, aggregate=False)
         if account_name:
             current = next(
@@ -791,8 +792,8 @@ class SignTaskService:
 
     def _iter_task_dirs(
         self, task_name: str, account_names: Iterable[str]
-    ) -> List[tuple[str, Path]]:
-        dirs: List[tuple[str, Path]] = []
+    ) -> list[tuple[str, Path]]:
+        dirs: list[tuple[str, Path]] = []
         for name in self._normalize_account_names(account_names):
             task_dir = self._resolve_task_dir(task_name, name)
             if task_dir is not None:
@@ -838,13 +839,13 @@ class SignTaskService:
         return text
 
     def _normalize_flow_logs(
-        self, flow_logs: Optional[List[str]]
-    ) -> tuple[List[str], bool, int]:
+        self, flow_logs: list[str] | None
+    ) -> tuple[list[str], bool, int]:
         if not isinstance(flow_logs, list):
             return [], False, 0
 
         total = len(flow_logs)
-        trimmed: List[str] = []
+        trimmed: list[str] = []
         for line in flow_logs:
             text = self._repair_mojibake(str(line)).replace("\r", "").rstrip("\n")
             trimmed.append(text)
@@ -852,14 +853,12 @@ class SignTaskService:
 
     def _load_history_entries(
         self, task_name: str, account_name: str = ""
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         history_file = self._history_file_path(task_name, account_name)
         legacy_file = self.run_history_dir / f"{self._safe_history_key(task_name)}.json"
 
         if not history_file.exists():
-            if account_name and legacy_file.exists():
-                history_file = legacy_file
-            elif not account_name and legacy_file.exists():
+            if account_name and legacy_file.exists() or not account_name and legacy_file.exists():
                 history_file = legacy_file
             else:
                 return []
@@ -877,7 +876,7 @@ class SignTaskService:
         else:
             return []
 
-        entries: List[Dict[str, Any]] = []
+        entries: list[dict[str, Any]] = []
         for item in data_list:
             if not isinstance(item, dict):
                 continue
@@ -892,7 +891,7 @@ class SignTaskService:
 
     def _resolve_existing_history_file(
         self, task_name: str, account_name: str = ""
-    ) -> Optional[Path]:
+    ) -> Path | None:
         history_file = self._history_file_path(task_name, account_name)
         legacy_file = self.run_history_dir / f"{self._safe_history_key(task_name)}.json"
 
@@ -903,7 +902,7 @@ class SignTaskService:
         return None
 
     @staticmethod
-    def _load_history_payload_from_file(history_file: Path) -> List[Any]:
+    def _load_history_payload_from_file(history_file: Path) -> list[Any]:
         try:
             with open(history_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
@@ -920,7 +919,7 @@ class SignTaskService:
         self,
         task_name: str,
         account_name: str = "",
-        last_run: Optional[Dict[str, Any]] = None,
+        last_run: dict[str, Any] | None = None,
     ) -> None:
         try:
             task_dir = self._resolve_task_dir(task_name, account_name or None)
@@ -956,14 +955,12 @@ class SignTaskService:
 
     def _legacy_get_task_history_logs(
         self, task_name: str, account_name: str, limit: int = 20
-    ) -> List[Dict[str, Any]]:
-        if limit < 1:
-            limit = 1
-        if limit > 200:
-            limit = 200
+    ) -> list[dict[str, Any]]:
+        limit = max(limit, 1)
+        limit = min(limit, 200)
 
         history = self._load_history_entries(task_name, account_name=account_name)
-        result: List[Dict[str, Any]] = []
+        result: list[dict[str, Any]] = []
         try:
             from backend.services.keyword_monitor import get_keyword_monitor_service
 
@@ -992,7 +989,7 @@ class SignTaskService:
             )
         return result
 
-    def get_account_history_logs(self, account_name: str) -> List[Dict[str, Any]]:
+    def get_account_history_logs(self, account_name: str) -> list[dict[str, Any]]:
         """获取某账号下所有任务的最近历史日志"""
         account_name = validate_storage_name(account_name, field_name="account_name")
         all_history = []
@@ -1045,13 +1042,11 @@ class SignTaskService:
         all_history.sort(key=lambda x: x.get("time", ""), reverse=True)
         return all_history
 
-    def get_recent_history_logs(self, limit: int = 50) -> List[Dict[str, Any]]:
-        if limit < 1:
-            limit = 1
-        if limit > 200:
-            limit = 200
+    def get_recent_history_logs(self, limit: int = 50) -> list[dict[str, Any]]:
+        limit = max(limit, 1)
+        limit = min(limit, 200)
 
-        recent: List[Dict[str, Any]] = []
+        recent: list[dict[str, Any]] = []
         seen_pairs: set[tuple[str, str]] = set()
 
         for task in self.list_tasks(force_refresh=False, aggregate=False):
@@ -1092,14 +1087,12 @@ class SignTaskService:
 
     def get_filtered_history_logs(
         self,
-        account_name: Optional[str] = None,
-        date: Optional[str] = None,
+        account_name: str | None = None,
+        date: str | None = None,
         limit: int = 200,
-    ) -> List[Dict[str, Any]]:
-        if limit < 1:
-            limit = 1
-        if limit > 1000:
-            limit = 1000
+    ) -> list[dict[str, Any]]:
+        limit = max(limit, 1)
+        limit = min(limit, 1000)
 
         normalized_account = (
             validate_storage_name(account_name, field_name="account_name")
@@ -1107,7 +1100,7 @@ class SignTaskService:
             else None
         )
         normalized_date = str(date or "").strip()[:10]
-        history_items: List[Dict[str, Any]] = []
+        history_items: list[dict[str, Any]] = []
         seen_pairs: set[tuple[str, str]] = set()
 
         for task in self.list_tasks(
@@ -1160,7 +1153,7 @@ class SignTaskService:
         account_name: str,
         task_name: str,
         created_at: str,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         normalized_account = validate_storage_name(
             account_name, field_name="account_name"
         )
@@ -1216,7 +1209,7 @@ class SignTaskService:
             return False
 
         raw_entries = self._load_history_payload_from_file(history_file)
-        kept_entries: List[Any] = []
+        kept_entries: list[Any] = []
         deleted = False
 
         for entry in raw_entries:
@@ -1295,7 +1288,7 @@ class SignTaskService:
         except Exception:
             pass
 
-    def clear_all_history_logs(self) -> Dict[str, int]:
+    def clear_all_history_logs(self) -> dict[str, int]:
         removed_files = 0
         removed_entries = 0
 
@@ -1333,7 +1326,7 @@ class SignTaskService:
 
         return {"removed_files": removed_files, "removed_entries": removed_entries}
 
-    def clear_account_history_logs(self, account_name: str) -> Dict[str, int]:
+    def clear_account_history_logs(self, account_name: str) -> dict[str, int]:
         """娓呯悊鏌愯处鍙风殑鍘嗗彶鏃ュ織锛屼笉褰卞搷鍏朵粬璐﹀彿"""
         account_name = validate_storage_name(account_name, field_name="account_name")
         removed_files = 0
@@ -1406,7 +1399,7 @@ class SignTaskService:
                     pass
                 continue
 
-            kept: List[Dict[str, Any]] = []
+            kept: list[dict[str, Any]] = []
             for item in data_list:
                 if not isinstance(item, dict):
                     continue
@@ -1432,7 +1425,7 @@ class SignTaskService:
 
     def _get_last_run_info(
         self, task_dir: Path, account_name: str = ""
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         获取任务的最后执行信息
         """
@@ -1462,7 +1455,7 @@ class SignTaskService:
         success: bool,
         message: str = "",
         account_name: str = "",
-        flow_logs: Optional[List[str]] = None,
+        flow_logs: list[str] | None = None,
     ):
         """保存任务执行历史 (保留列表)"""
         from datetime import datetime
@@ -1474,7 +1467,7 @@ class SignTaskService:
         last_target_message = extract_last_target_message(normalized_logs)
 
         new_entry = {
-            "time": datetime.now().isoformat(),
+            "time": datetime.now().isoformat(),  # noqa: DTZ005 - display-only history entry timestamp
             "success": success,
             "message": self._repair_mojibake(message),
             "account_name": account_name,
@@ -1536,7 +1529,7 @@ class SignTaskService:
                         break
 
         except Exception as e:
-            _service_logger.debug(f"保存运行信息失败: {str(e)}")
+            _service_logger.debug(f"保存运行信息失败: {e!s}")
 
     def _append_scheduler_log(self, filename: str, message: str) -> None:
         try:
@@ -1550,7 +1543,7 @@ class SignTaskService:
                 'Failed to write scheduler log %s: %s', filename, e
             )
 
-    def _get_effective_proxy(self, account_name: str) -> Optional[str]:
+    def _get_effective_proxy(self, account_name: str) -> str | None:
         proxy_value = get_account_proxy(account_name)
         if proxy_value:
             return proxy_value
@@ -1569,8 +1562,8 @@ class SignTaskService:
         account_name: str,
         task_name: str,
         message: str,
-        last_target_message: Optional[str] = None,
-        flow_logs: Optional[List[str]] = None,
+        last_target_message: str | None = None,
+        flow_logs: list[str] | None = None,
     ) -> None:
         try:
             from backend.services.config import get_config_service
@@ -1696,7 +1689,7 @@ class SignTaskService:
         task_name: str,
         no_updates: bool,
         notify_on_failure: bool = True,
-    ) -> Optional[str]:
+    ) -> str | None:
         stored_status = get_account_status(account_name)
         if (
             stored_status.get("status") == "invalid"
@@ -1747,8 +1740,8 @@ class SignTaskService:
         return None
 
     def _legacy_list_tasks(
-        self, account_name: Optional[str] = None, force_refresh: bool = False
-    ) -> List[Dict[str, Any]]:
+        self, account_name: str | None = None, force_refresh: bool = False
+    ) -> list[dict[str, Any]]:
         """
         获取所有签到任务列表 (支持内存缓存)
         """
@@ -1800,10 +1793,10 @@ class SignTaskService:
             return self._tasks_cache
 
         except Exception as e:
-            _service_logger.debug(f"扫描任务出错: {str(e)}")
+            _service_logger.debug(f"扫描任务出错: {e!s}")
             return []
 
-    def _load_task_config(self, task_dir: Path) -> Optional[Dict[str, Any]]:
+    def _load_task_config(self, task_dir: Path) -> dict[str, Any] | None:
         """加载单个任务配置，优先使用 config.json 中的 last_run"""
         config_file = task_dir / "config.json"
         if not config_file.exists():
@@ -1839,8 +1832,8 @@ class SignTaskService:
             return None
 
     def _legacy_get_task(
-        self, task_name: str, account_name: Optional[str] = None
-    ) -> Optional[Dict[str, Any]]:
+        self, task_name: str, account_name: str | None = None
+    ) -> dict[str, Any] | None:
         """
         获取单个任务的详细信息
         """
@@ -1880,15 +1873,15 @@ class SignTaskService:
         self,
         task_name: str,
         sign_at: str,
-        chats: List[Dict[str, Any]],
+        chats: list[dict[str, Any]],
         random_seconds: int = 0,
-        sign_interval: Optional[int] = None,
+        sign_interval: int | None = None,
         account_name: str = "",
         execution_mode: str = "fixed",
         range_start: str = "",
         range_end: str = "",
         notify_on_failure: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         创建新的签到任务
         """
@@ -1931,7 +1924,7 @@ class SignTaskService:
             with open(config_file, "w", encoding="utf-8") as f:
                 json.dump(config, f, ensure_ascii=False, indent=2)
         except Exception as e:
-            _service_logger.debug(f"写入配置文件失败: {str(e)}")
+            _service_logger.debug(f"写入配置文件失败: {e!s}")
             raise
 
         # Invalidate cache
@@ -1966,16 +1959,16 @@ class SignTaskService:
     def _legacy_update_task_v1(
         self,
         task_name: str,
-        sign_at: Optional[str] = None,
-        chats: Optional[List[Dict[str, Any]]] = None,
-        random_seconds: Optional[int] = None,
-        sign_interval: Optional[int] = None,
-        account_name: Optional[str] = None,
-        execution_mode: Optional[str] = None,
-        range_start: Optional[str] = None,
-        range_end: Optional[str] = None,
-        notify_on_failure: Optional[bool] = None,
-    ) -> Dict[str, Any]:
+        sign_at: str | None = None,
+        chats: list[dict[str, Any]] | None = None,
+        random_seconds: int | None = None,
+        sign_interval: int | None = None,
+        account_name: str | None = None,
+        execution_mode: str | None = None,
+        range_start: str | None = None,
+        range_end: str | None = None,
+        notify_on_failure: bool | None = None,
+    ) -> dict[str, Any]:
         """
         更新签到任务
         """
@@ -2046,12 +2039,12 @@ class SignTaskService:
             msg = f"DEBUG: 更新调度任务失败: {e}"
             print(msg)
             self._append_scheduler_log(
-                "scheduler_error.log", f"{datetime.now()}: {msg}"
+                "scheduler_error.log", f"{datetime.now()}: {msg}"  # noqa: DTZ005 - display-only scheduler log
             )
         else:
             self._append_scheduler_log(
                 "scheduler_update.log",
-                f"{datetime.now()}: Updated task {task_name} with cron {config.get('range_start') if config.get('execution_mode') == 'range' else config['sign_at']}",
+                f"{datetime.now()}: Updated task {task_name} with cron {config.get('range_start') if config.get('execution_mode') == 'range' else config['sign_at']}",  # noqa: DTZ005 - display-only scheduler log
             )
 
         return {
@@ -2069,7 +2062,7 @@ class SignTaskService:
         }
 
     def _legacy_delete_task_v1(
-        self, task_name: str, account_name: Optional[str] = None
+        self, task_name: str, account_name: str | None = None
     ) -> bool:
         """
         删除签到任务
@@ -2113,16 +2106,14 @@ class SignTaskService:
             return False
 
     def get_task_history_logs(
-        self, task_name: str, account_name: Optional[str] = None, limit: int = 20
-    ) -> List[Dict[str, Any]]:
-        if limit < 1:
-            limit = 1
-        if limit > 200:
-            limit = 200
+        self, task_name: str, account_name: str | None = None, limit: int = 20
+    ) -> list[dict[str, Any]]:
+        limit = max(limit, 1)
+        limit = min(limit, 200)
 
         if account_name:
             history = self._load_history_entries(task_name, account_name=account_name)
-            result: List[Dict[str, Any]] = []
+            result: list[dict[str, Any]] = []
             try:
                 from backend.services.keyword_monitor import get_keyword_monitor_service
 
@@ -2156,7 +2147,7 @@ class SignTaskService:
                 )
             return result
 
-        merged: List[Dict[str, Any]] = []
+        merged: list[dict[str, Any]] = []
         task = self.get_task(task_name, aggregate=True)
         if not task:
             return []
@@ -2177,12 +2168,12 @@ class SignTaskService:
 
     def list_tasks(
         self,
-        account_name: Optional[str] = None,
+        account_name: str | None = None,
         force_refresh: bool = False,
         aggregate: bool = False,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Return sign tasks, optionally grouped by shared task set."""
-        tasks: List[Dict[str, Any]]
+        tasks: list[dict[str, Any]]
         if self._tasks_cache is not None and not force_refresh:
             tasks = self._tasks_cache
         else:
@@ -2214,7 +2205,7 @@ class SignTaskService:
                 )
                 tasks = self._tasks_cache
             except Exception as e:
-                _service_logger.debug(f"扫描任务出错: {str(e)}")
+                _service_logger.debug(f"扫描任务出错: {e!s}")
                 return []
 
         if account_name:
@@ -2226,7 +2217,7 @@ class SignTaskService:
             return self._aggregate_tasks(tasks)
         return tasks
 
-    def _load_task_config(self, task_dir: Path) -> Optional[Dict[str, Any]]:
+    def _load_task_config(self, task_dir: Path) -> dict[str, Any] | None:
         """Load one task config and normalize multi-account metadata."""
         config_file = task_dir / "config.json"
         if not config_file.exists():
@@ -2274,9 +2265,9 @@ class SignTaskService:
     def get_task(
         self,
         task_name: str,
-        account_name: Optional[str] = None,
+        account_name: str | None = None,
         aggregate: bool = False,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Get one task, optionally as an aggregated shared-task view."""
         if aggregate and not account_name:
             related = self._find_related_task_infos(task_name)
@@ -2294,16 +2285,16 @@ class SignTaskService:
         self,
         task_name: str,
         sign_at: str,
-        chats: List[Dict[str, Any]],
+        chats: list[dict[str, Any]],
         random_seconds: int = 0,
-        sign_interval: Optional[int] = None,
+        sign_interval: int | None = None,
         account_name: str = "",
-        account_names: Optional[List[str]] = None,
+        account_names: list[str] | None = None,
         execution_mode: str = "fixed",
         range_start: str = "",
         range_end: str = "",
         notify_on_failure: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Create a sign task that can be shared by multiple accounts."""
         from backend.services.config import get_config_service
 
@@ -2390,17 +2381,17 @@ class SignTaskService:
     def update_task(
         self,
         task_name: str,
-        sign_at: Optional[str] = None,
-        chats: Optional[List[Dict[str, Any]]] = None,
-        random_seconds: Optional[int] = None,
-        sign_interval: Optional[int] = None,
-        account_name: Optional[str] = None,
-        account_names: Optional[List[str]] = None,
-        execution_mode: Optional[str] = None,
-        range_start: Optional[str] = None,
-        range_end: Optional[str] = None,
-        notify_on_failure: Optional[bool] = None,
-    ) -> Dict[str, Any]:
+        sign_at: str | None = None,
+        chats: list[dict[str, Any]] | None = None,
+        random_seconds: int | None = None,
+        sign_interval: int | None = None,
+        account_name: str | None = None,
+        account_names: list[str] | None = None,
+        execution_mode: str | None = None,
+        range_start: str | None = None,
+        range_end: str | None = None,
+        notify_on_failure: bool | None = None,
+    ) -> dict[str, Any]:
         """Update one task and fan out the config to all linked accounts."""
         task_name = validate_storage_name(task_name, field_name="task_name")
 
@@ -2497,7 +2488,7 @@ class SignTaskService:
             desired_dir = self.signs_dir / current_account / task_name
             desired_dir.mkdir(parents=True, exist_ok=True)
 
-            config: Dict[str, Any] = {
+            config: dict[str, Any] = {
                 "_version": 4,
                 "task_group_id": next_group_id,
                 "account_name": current_account,
@@ -2539,7 +2530,7 @@ class SignTaskService:
         self._tasks_cache = None
         self._append_scheduler_log(
             "scheduler_update.log",
-            f"{datetime.now()}: Updated task {task_name} for {','.join(target_accounts)}",
+            f"{datetime.now()}: Updated task {task_name} for {','.join(target_accounts)}",  # noqa: DTZ005 - display-only scheduler log
         )
 
         related = self._find_related_task_infos(task_name, target_accounts[0])
@@ -2589,7 +2580,7 @@ class SignTaskService:
 
             account_names = config.get("account_names")
             if isinstance(account_names, list):
-                next_account_names: List[str] = []
+                next_account_names: list[str] = []
                 for item in account_names:
                     current_name = str(item or "").strip()
                     if not current_name:
@@ -2661,7 +2652,7 @@ class SignTaskService:
         self._tasks_cache = None
 
     def delete_task(
-        self, task_name: str, account_name: Optional[str] = None
+        self, task_name: str, account_name: str | None = None
     ) -> bool:
         """Delete one task or one shared multi-account task set."""
         task_name = validate_storage_name(task_name, field_name="task_name")
@@ -2696,7 +2687,7 @@ class SignTaskService:
 
     async def get_account_chats(
         self, account_name: str, force_refresh: bool = False
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         获取账号的 Chat 列表 (带缓存)
         """
@@ -2705,7 +2696,7 @@ class SignTaskService:
 
         if not force_refresh and cache_file.exists():
             try:
-                with open(cache_file, "r", encoding="utf-8") as f:
+                with open(cache_file, "r", encoding="utf-8") as f:  # noqa: ASYNC230 - small JSON read, not worth aiofiles
                     return json.load(f)
             except Exception:
                 pass
@@ -2720,19 +2711,16 @@ class SignTaskService:
         *,
         limit: int = 50,
         offset: int = 0,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         通过缓存搜索账号的 Chat 列表（不触发全量 get_dialogs）
         """
         account_name = validate_storage_name(account_name, field_name="account_name")
         cache_file = self.signs_dir / account_name / "chats_cache.json"
 
-        if limit < 1:
-            limit = 1
-        if limit > 200:
-            limit = 200
-        if offset < 0:
-            offset = 0
+        limit = max(limit, 1)
+        limit = min(limit, 200)
+        offset = max(offset, 0)
 
         if not cache_file.exists():
             return {"items": [], "total": 0, "limit": limit, "offset": offset}
@@ -2758,7 +2746,7 @@ class SignTaskService:
 
         is_numeric = q.lstrip("-").isdigit()
         if is_numeric or q.startswith("-100"):
-            def match(chat: Dict[str, Any]) -> bool:
+            def match(chat: dict[str, Any]) -> bool:
                 chat_id = chat.get("id")
                 if chat_id is None:
                     return False
@@ -2766,7 +2754,7 @@ class SignTaskService:
         else:
             q_lower = q.lower()
 
-            def match(chat: Dict[str, Any]) -> bool:
+            def match(chat: dict[str, Any]) -> bool:
                 title = (chat.get("title") or "").lower()
                 username = (chat.get("username") or "").lower()
                 return q_lower in title or q_lower in username
@@ -2810,7 +2798,7 @@ class SignTaskService:
         except Exception:
             pass
 
-    async def refresh_account_chats(self, account_name: str) -> List[Dict[str, Any]]:
+    async def refresh_account_chats(self, account_name: str) -> list[dict[str, Any]]:
         """
         连接 Telegram 并刷新 Chat 列表
         """
@@ -2880,7 +2868,7 @@ class SignTaskService:
         }
         client = get_client(**client_kwargs)
 
-        chats: List[Dict[str, Any]] = []
+        chats: list[dict[str, Any]] = []
         logger = logging.getLogger("backend")
         try:
             # 初始化账号锁（跨服务共享）
@@ -2889,8 +2877,8 @@ class SignTaskService:
 
             account_lock = self._account_locks[account_name]
 
-            async def _fetch_chats(active_client) -> List[Dict[str, Any]]:
-                local_chats: List[Dict[str, Any]] = []
+            async def _fetch_chats(active_client) -> list[dict[str, Any]]:
+                local_chats: list[dict[str, Any]] = []
                 # 使用上下文管理器处理生命周期和锁
                 async with account_lock:
                     async with get_global_semaphore():
@@ -3003,7 +2991,7 @@ class SignTaskService:
             cache_file = account_dir / "chats_cache.json"
 
             try:
-                with open(cache_file, "w", encoding="utf-8") as f:
+                with open(cache_file, "w", encoding="utf-8") as f:  # noqa: ASYNC230 - small JSON write, not worth aiofiles
                     json.dump(chats, f, ensure_ascii=False, indent=2)
             except Exception as e:
                 _service_logger.debug(f"保存 Chat 缓存失败: {e}")
@@ -3014,7 +3002,7 @@ class SignTaskService:
             # client 上下文管理器会自动处理 disconnect/stop，这里只需要处理业务异常
             raise e
 
-    async def run_task(self, account_name: str, task_name: str) -> Dict[str, Any]:
+    async def run_task(self, account_name: str, task_name: str) -> dict[str, Any]:
         """
         运行签到任务 (兼容接口，内部调用 run_task_with_logs)
         """
@@ -3023,14 +3011,14 @@ class SignTaskService:
     def _task_key(self, account_name: str, task_name: str) -> tuple[str, str]:
         return account_name, task_name
 
-    def _find_task_keys(self, task_name: str) -> List[tuple[str, str]]:
+    def _find_task_keys(self, task_name: str) -> list[tuple[str, str]]:
         return [key for key in self._active_logs.keys() if key[1] == task_name]
 
     def get_active_logs(
-        self, task_name: str, account_name: Optional[str] = None
-    ) -> List[str]:
+        self, task_name: str, account_name: str | None = None
+    ) -> list[str]:
         """获取正在运行任务的日志"""
-        monitor_logs: List[str] = []
+        monitor_logs: list[str] = []
         try:
             from backend.services.keyword_monitor import get_keyword_monitor_service
 
@@ -3065,12 +3053,12 @@ class SignTaskService:
         *,
         run_id: str,
         state: str,
-        success: Optional[bool] = None,
+        success: bool | None = None,
         error: str = "",
         output: str = "",
-        started_at: Optional[str] = None,
-        finished_at: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        started_at: str | None = None,
+        finished_at: str | None = None,
+    ) -> dict[str, Any]:
         task_key = self._task_key(account_name, task_name)
         status = {
             "run_id": run_id,
@@ -3104,7 +3092,7 @@ class SignTaskService:
             description=f"run status cleanup {account_name}/{task_name}",
         )
 
-    async def start_task_run(self, account_name: str, task_name: str) -> Dict[str, Any]:
+    async def start_task_run(self, account_name: str, task_name: str) -> dict[str, Any]:
         account_name = validate_storage_name(account_name, field_name="account_name")
         task_name = validate_storage_name(task_name, field_name="task_name")
 
@@ -3142,7 +3130,7 @@ class SignTaskService:
         )
 
         async def runner() -> None:
-            result: Dict[str, Any]
+            result: dict[str, Any]
             state = "finished"
             try:
                 result = await self.run_task_with_logs(account_name, task_name)
@@ -3185,8 +3173,8 @@ class SignTaskService:
         return status
 
     def get_task_run_status(
-        self, account_name: str, task_name: str, run_id: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, account_name: str, task_name: str, run_id: str | None = None
+    ) -> dict[str, Any]:
         account_name = validate_storage_name(account_name, field_name="account_name")
         task_name = validate_storage_name(task_name, field_name="task_name")
 
@@ -3214,7 +3202,7 @@ class SignTaskService:
             }
         return dict(status)
 
-    def is_task_running(self, task_name: str, account_name: Optional[str] = None) -> bool:
+    def is_task_running(self, task_name: str, account_name: str | None = None) -> bool:
         """检查任务是否正在运行"""
         if account_name:
             return self._active_tasks.get(self._task_key(account_name, task_name), False)
@@ -3222,7 +3210,7 @@ class SignTaskService:
 
     async def run_task_with_logs(
         self, account_name: str, task_name: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """运行任务并实时捕获日志 (In-Process)"""
 
         account_name = validate_storage_name(account_name, field_name="account_name")
@@ -3248,15 +3236,15 @@ class SignTaskService:
 
         # 获取 logger 实例
         tg_logger = logging.getLogger("tg-signer")
-        log_handler: Optional[TaskLogHandler] = None
+        log_handler: TaskLogHandler | None = None
 
         success = False
         error_msg = ""
         output_str = ""
         account_invalid_detected = False
         task_notify_on_failure = True
-        task_cfg: Optional[Dict[str, Any]] = None
-        signer: Optional[BackendUserSigner] = None
+        task_cfg: dict[str, Any] | None = None
+        signer: BackendUserSigner | None = None
 
         try:
             task_cfg = self.get_task(task_name, account_name=account_name)
@@ -3435,7 +3423,7 @@ class SignTaskService:
                     invalid_message,
                     notify_on_failure=task_notify_on_failure,
                 )
-            error_msg = f"任务执行出错: {str(e)}"
+            error_msg = f"任务执行出错: {e!s}"
             self._active_logs[task_key].append(error_msg)
             # 打印堆栈以便调试
             traceback.print_exc()
@@ -3591,7 +3579,7 @@ class SignTaskService:
 
 
 # 创建全局实例
-_sign_task_service: Optional[SignTaskService] = None
+_sign_task_service: SignTaskService | None = None
 
 
 def get_sign_task_service() -> SignTaskService:

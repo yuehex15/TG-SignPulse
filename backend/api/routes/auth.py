@@ -10,7 +10,11 @@ from sqlalchemy.orm import Session
 from backend.core import auth as auth_core
 from backend.core.auth import authenticate_user, create_access_token, verify_totp
 from backend.core.database import get_db
-from backend.core.rate_limit import compose_rate_limit_key, get_client_identifier, get_rate_limiter
+from backend.core.rate_limit import (
+    compose_rate_limit_key,
+    get_client_identifier,
+    get_rate_limiter,
+)
 from backend.core.security import verify_password
 from backend.models.login_log import LoginLog
 from backend.models.user import User

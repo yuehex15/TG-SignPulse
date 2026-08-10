@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Dict
 
-
-_ACCOUNT_LOCKS: Dict[str, asyncio.Lock] = {}
+_ACCOUNT_LOCKS: dict[str, asyncio.Lock] = {}
 _ACCOUNT_LOCK_DICT_LOCK = asyncio.Lock()
 
 

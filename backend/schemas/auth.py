@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -16,7 +15,7 @@ _PYDANTIC_V2 = hasattr(BaseModel, "model_validate")
 class LoginRequest(BaseModel):
     username: str
     password: str
-    totp_code: Optional[str] = None
+    totp_code: str | None = None
 
 
 class TokenResponse(BaseModel):

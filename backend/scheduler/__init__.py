@@ -16,7 +16,8 @@ scheduler: AsyncIOScheduler | None = None
 def _parse_clock_time(value: str):
     for fmt in ("%H:%M:%S", "%H:%M"):
         try:
-            return datetime.strptime(value, fmt).time()
+            # extracting a time-of-day only; timezone irrelevant
+            return datetime.strptime(value, fmt).time()  # noqa: DTZ007
         except ValueError:
             continue
     raise ValueError(f"Invalid clock time: {value}")
@@ -89,7 +90,7 @@ async def _job_run_sign_task(account_name: str, task_name: str) -> None:
                     end_time = _parse_clock_time(range_end_str)
 
                     # 转换为当前日期的 datetime
-                    now = datetime.now()
+                    now = datetime.now()  # noqa: DTZ005 - naive local time for same-day range arithmetic
                     start_dt = now.replace(
                         hour=start_time.hour,
                         minute=start_time.minute,
@@ -289,7 +290,6 @@ def add_or_update_sign_task_job(
     account_name: str, task_name: str, cron_expression: str, enabled: bool = True
 ) -> None:
     """动态添加或更新签到任务 Job"""
-    global scheduler
     if not scheduler:
         return
 
@@ -318,7 +318,6 @@ def add_or_update_sign_task_job(
 
 def remove_sign_task_job(account_name: str, task_name: str) -> None:
     """动态移除签到任务 Job"""
-    global scheduler
     if not scheduler:
         return
 

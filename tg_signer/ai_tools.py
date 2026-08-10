@@ -2,10 +2,10 @@ import base64
 import json
 import os
 import pathlib
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Optional
 
 import json_repair
-from typing_extensions import Optional, Required, TypedDict
+from typing_extensions import Required, TypedDict
 
 if TYPE_CHECKING:
     from openai import AsyncOpenAI  # 在性能弱的机器上导入openai包实在有些慢
@@ -49,12 +49,12 @@ def encode_image(image: bytes):
 
 class OpenAIConfig(TypedDict, total=False):
     api_key: Required[str]
-    base_url: Optional[str]
-    model: Optional[str]
+    base_url: str | None
+    model: str | None
 
 
 class OpenAIConfigManager:
-    def __init__(self, workdir: Union[str, pathlib.Path]):
+    def __init__(self, workdir: str | pathlib.Path):
         self.workdir = pathlib.Path(workdir)
 
     def get_config_file(self) -> pathlib.Path:
@@ -66,7 +66,7 @@ class OpenAIConfigManager:
     def has_config(self) -> bool:
         return bool(self.load_config())
 
-    def load_file_config(self) -> Optional[dict]:
+    def load_file_config(self) -> dict | None:
         config_file = self.get_config_file()
         if config_file.exists():
             with open(config_file, "r", encoding="utf-8") as fp:
@@ -84,7 +84,7 @@ class OpenAIConfigManager:
         if os.name == "posix":
             config_file.chmod(0o600)
 
-    def load_config(self) -> Optional[OpenAIConfig]:
+    def load_config(self) -> OpenAIConfig | None:
         # 环境变量优先
         if self.has_env_config():
             return OpenAIConfig(

@@ -19,9 +19,9 @@ def utc_now_iso_z() -> str:
     return utc_now().isoformat().replace("+00:00", "Z")
 
 
-def utc_from_timestamp(timestamp: int | float) -> datetime:
+def utc_from_timestamp(timestamp: float) -> datetime:
     return datetime.fromtimestamp(timestamp, UTC)
 
 
-def utc_from_timestamp_iso_z(timestamp: int | float) -> str:
+def utc_from_timestamp_iso_z(timestamp: float) -> str:
     return utc_from_timestamp(timestamp).isoformat().replace("+00:00", "Z")

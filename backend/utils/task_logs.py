@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import Iterable
+from collections.abc import Iterable
 
 _TIMESTAMP_PREFIX = re.compile(r"^\d{4}-\d{2}-\d{2}.*? -\s*")
 

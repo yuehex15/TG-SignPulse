@@ -15,11 +15,7 @@ from typing import (
     Any,
     BinaryIO,
     Generic,
-    List,
-    Optional,
-    Type,
     TypeVar,
-    Union,
 )
 from urllib import parse
 
@@ -189,8 +185,7 @@ _original_sqlite3_connect = sqlite3.connect
 def _patched_sqlite3_connect(*args, **kwargs):
     # Force timeout to be at least 10 seconds, even if Pyrogram sets it to 1
     if "timeout" in kwargs:
-        if kwargs["timeout"] < 30:
-            kwargs["timeout"] = 30
+        kwargs["timeout"] = max(kwargs["timeout"], 30)
     else:
         kwargs["timeout"] = 30
     return _original_sqlite3_connect(*args, **kwargs)
@@ -340,7 +335,7 @@ def readable_chat(chat: Chat):
     else:
         type_ = "个人"
 
-    none_or_dash = lambda x: x or "-"  # noqa: E731
+    none_or_dash = lambda x: x or "-"
 
     return f"id: {chat.id}, username: {none_or_dash(chat.username)}, title: {none_or_dash(chat.title)}, type: {type_}, name: {none_or_dash(chat.first_name)}"
 
@@ -463,7 +458,7 @@ class Client(BaseClient):
         return self.workdir / (self.name + ".session_string")
 
     async def save_session_string(self):
-        with open(self.session_string_file, "w") as fp:
+        with open(self.session_string_file, "w") as fp:  # noqa: ASYNC230 - small file write, wrpped by async caller
             fp.write(await self.export_session_string())
         if os.name == "posix":
             self.session_string_file.chmod(0o600)
@@ -520,7 +515,7 @@ def get_proxy(proxy: str = None):
 def get_client(
     name: str = "my_account",
     proxy: dict = None,
-    workdir: Union[str, pathlib.Path] = ".",
+    workdir: str | pathlib.Path = ".",
     session_string: str = None,
     in_memory: bool = False,
     api_id: int = None,
@@ -569,7 +564,7 @@ def get_client(
     return client
 
 
-async def close_client_by_name(name: str, workdir: Union[str, pathlib.Path] = "."):
+async def close_client_by_name(name: str, workdir: str | pathlib.Path = "."):
     """
     Forcefully close a client instance by its name and release resources.
     """
@@ -631,7 +626,7 @@ ConfigT = TypeVar("ConfigT", bound=BaseJSONConfig)
 class BaseUserWorker(Generic[ConfigT]):
     _workdir = "."
     _tasks_dir = "tasks"
-    cfg_cls: Type["ConfigT"] = BaseJSONConfig
+    cfg_cls: type["ConfigT"] = BaseJSONConfig
 
     def __init__(
         self,
@@ -644,9 +639,9 @@ class BaseUserWorker(Generic[ConfigT]):
         in_memory: bool = False,
         api_id: int = None,
         api_hash: str = None,
-        no_updates: Optional[bool] = None,
+        no_updates: bool | None = None,
         *,
-        loop: Optional[asyncio.AbstractEventLoop] = None,
+        loop: asyncio.AbstractEventLoop | None = None,
     ):
         self.task_name = task_name or "my_task"
         self._session_dir = pathlib.Path(session_dir)
@@ -671,10 +666,10 @@ class BaseUserWorker(Generic[ConfigT]):
             **client_kwargs,
         )
         self.loop = self.app.loop
-        self.user: Optional[User] = None
+        self.user: User | None = None
         self._config = None
-        self._ai_tools: Optional[AITools] = None
-        self._ai_cfg_signature: Optional[tuple[str, str, str]] = None
+        self._ai_tools: AITools | None = None
+        self._ai_cfg_signature: tuple[str, str, str] | None = None
         self.context = self.ensure_ctx()
 
     def ensure_ctx(self):
@@ -818,7 +813,7 @@ class BaseUserWorker(Generic[ConfigT]):
         self.write_config(config)
         return config
 
-    def load_config(self, cfg_cls: Type[ConfigT] = None) -> ConfigT:
+    def load_config(self, cfg_cls: type[ConfigT] = None) -> ConfigT:
         cfg_cls = cfg_cls or self.cfg_cls
         if not self.config_file.exists():
             config = self.reconfig()
@@ -891,7 +886,7 @@ class BaseUserWorker(Generic[ConfigT]):
                     level="WARNING",
                 )
 
-            with open(
+            with open(  # noqa: ASYNC230 - small JSON write in background task
                 self.get_user_dir(me).joinpath("latest_chats.json"),
                 "w",
                 encoding="utf-8",
@@ -914,7 +909,7 @@ class BaseUserWorker(Generic[ConfigT]):
         return await self.app.log_out()
 
     async def send_message(
-        self, chat_id: Union[int, str], text: str, delete_after: int = None, **kwargs
+        self, chat_id: int | str, text: str, delete_after: int = None, **kwargs
     ):
         """
         发送文本消息
@@ -951,7 +946,7 @@ class BaseUserWorker(Generic[ConfigT]):
 
     async def send_dice(
         self,
-        chat_id: Union[int, str],
+        chat_id: int | str,
         emoji: str = "🎲",
         delete_after: int = None,
         **kwargs,
@@ -996,7 +991,7 @@ class BaseUserWorker(Generic[ConfigT]):
         return message
 
     async def search_members(
-        self, chat_id: Union[int, str], query: str, admin=False, limit=10
+        self, chat_id: int | str, query: str, admin=False, limit=10
     ):
         filter_ = ChatMembersFilter.SEARCH
         if admin:
@@ -1008,7 +1003,7 @@ class BaseUserWorker(Generic[ConfigT]):
             yield member
 
     async def list_members(
-        self, chat_id: Union[int, str], query: str = "", admin=False, limit=10
+        self, chat_id: int | str, query: str = "", admin=False, limit=10
     ):
         async with self.app:
             async for member in self.search_members(chat_id, query, admin, limit):
@@ -1099,12 +1094,12 @@ class UserSignerWorkerContext(BaseModel):
     waiter: Waiter
     sign_chats: dict  # 签到配置列表, int -> list[SignChatV3]
     chat_messages: dict  # 收到的消息, int -> dict[int, Optional[Message]]
-    waiting_message: Optional[Message] = None  # 正在处理的消息
+    waiting_message: Message | None = None  # 正在处理的消息
     stop_after_current_action: bool = False
-    stop_reason: Optional[str] = None
-    last_callback_answer: Optional[str] = None
-    current_action_index: Optional[int] = None
-    current_action_total: Optional[int] = None
+    stop_reason: str | None = None
+    last_callback_answer: str | None = None
+    current_action_index: int | None = None
+    current_action_total: int | None = None
     current_action_description: str = ""
     logged_action_message_markers: set = Field(default_factory=set)
 
@@ -1152,7 +1147,7 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
         except (TypeError, ValueError):
             return max(float(fallback_delay or 0), 0.0)
 
-    def _load_chat_cache(self) -> List[dict]:
+    def _load_chat_cache(self) -> list[dict]:
         try:
             cache_file = self.tasks_dir / self._account / "chats_cache.json"
             if not cache_file.exists():
@@ -1163,7 +1158,7 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
         except Exception:
             return []
 
-    def _find_cached_chat(self, chat_id: int, name: Optional[str]) -> Optional[dict]:
+    def _find_cached_chat(self, chat_id: int, name: str | None) -> dict | None:
         entries = self._load_chat_cache()
 
         candidate_ids = {chat_id}
@@ -1174,7 +1169,7 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
             except Exception:
                 pass
 
-        def _search_entries(cache_entries: List[dict]) -> Optional[dict]:
+        def _search_entries(cache_entries: list[dict]) -> dict | None:
             for entry in cache_entries:
                 try:
                     if entry.get("id") in candidate_ids:
@@ -1225,8 +1220,8 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
         return sign_record_dir / "sign_record.json"
 
     def _ask_actions(
-        self, input_: UserInput, available_actions: List[SupportAction] = None
-    ) -> List[ActionT]:
+        self, input_: UserInput, available_actions: list[SupportAction] = None
+    ) -> list[ActionT]:
         print_to_user(f"{input_.index_str}开始配置<动作>，请按照实际签到顺序配置。")
         available_actions = available_actions or list(SupportAction)
         actions = []
@@ -1341,7 +1336,7 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
         return config
 
     @classmethod
-    def _validate_sign_at(cls, sign_at_str: str) -> Optional[str]:
+    def _validate_sign_at(cls, sign_at_str: str) -> str | None:
         sign_at_str = sign_at_str.replace("：", ":").strip()
 
         try:
@@ -1482,7 +1477,7 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
         if total_actions == 0:
             raise RuntimeError("任务没有配置任何执行动作")
         max_flow_attempts = _read_positive_int_env("SIGN_TASK_FLOW_RETRY_ATTEMPTS", 3, 1)
-        last_error: Optional[Exception] = None
+        last_error: Exception | None = None
 
         for flow_attempt in range(1, max_flow_attempts + 1):
             if max_flow_attempts > 1:
@@ -1621,7 +1616,7 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
                 raise RuntimeError("所有会话均执行失败（详细请看运行日志）")
 
             sign_record[str(now.date())] = now.isoformat()
-            with open(self.sign_record_file, "w", encoding="utf-8") as fp:
+            with open(self.sign_record_file, "w", encoding="utf-8") as fp:  # noqa: ASYNC230 - small JSON write in task execution
                 json.dump(sign_record, fp)
 
         def need_sign(last_date_str):
@@ -1713,7 +1708,7 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
 
     async def send_dice_cli(
         self,
-        chat_id: Union[str, int],
+        chat_id: str | int,
         emoji: str = "🎲",
         delete_after: int = None,
         **kwargs,
@@ -1784,7 +1779,7 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
         return msg_thread_id == chat.message_thread_id
 
     @staticmethod
-    def _normalize_log_text(text: Optional[str], limit: int = 280) -> str:
+    def _normalize_log_text(text: str | None, limit: int = 280) -> str:
         value = " / ".join(
             line.strip() for line in str(text or "").splitlines() if line.strip()
         )
@@ -1855,9 +1850,9 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
 
     def _log_received_target_message(
         self,
-        message: Optional[Message],
+        message: Message | None,
         *,
-        prefix: Optional[str] = None,
+        prefix: str | None = None,
         allow_duplicate: bool = False,
     ) -> None:
         if message is None:
@@ -1884,7 +1879,7 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
                 prefix = "收到任务对象消息"
         self.log(f"{prefix}：{summary}")
 
-    def _summarize_target_message(self, message: Optional[Message]) -> str:
+    def _summarize_target_message(self, message: Message | None) -> str:
         if message is None:
             return ""
 
@@ -1930,7 +1925,7 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
 
     def _log_target_message(
         self,
-        message: Optional[Message],
+        message: Message | None,
         *,
         prefix: str = "任务对象消息",
         level: str = "INFO",
@@ -2046,7 +2041,7 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
                     return True
         return False
 
-    def _resolve_message_thread_id(self, message: Message) -> Optional[int]:
+    def _resolve_message_thread_id(self, message: Message) -> int | None:
         return getattr(message, "message_thread_id", None) or getattr(
             message, "reply_to_top_message_id", None
         )
@@ -2159,7 +2154,7 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
                 self.log(f"下一步动作候选消息检查失败: {e}", level="WARNING")
         return False
 
-    def _text_has_terminal_success_text(self, text: Optional[str]) -> bool:
+    def _text_has_terminal_success_text(self, text: str | None) -> bool:
         normalized = str(text or "").strip().lower()
         if not normalized:
             return False
@@ -2244,7 +2239,7 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
             marker in normalized for marker in success_context_markers
         )
 
-    def _callback_text_has_terminal_success_text(self, text: Optional[str]) -> bool:
+    def _callback_text_has_terminal_success_text(self, text: str | None) -> bool:
         normalized = str(text or "").strip().lower()
         if not normalized:
             return False
@@ -2337,7 +2332,7 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
         chat: SignChatV3,
         *,
         action_text: str,
-        next_action: Optional[ActionT],
+        next_action: ActionT | None,
         before_click_state: dict[int, tuple],
         history_limit: int,
         timeout: float,
@@ -2426,7 +2421,7 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
         action: ClickKeyboardByTextAction,
         message: Message,
         *,
-        message_thread_id: Optional[int] = None,
+        message_thread_id: int | None = None,
         before_click=None,
         log_not_found: bool = True,
     ) -> tuple[bool, bool]:
@@ -2481,7 +2476,7 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
         action: ClickKeyboardByTextAction,
         message: Message,
         *,
-        message_thread_id: Optional[int] = None,
+        message_thread_id: int | None = None,
     ):
         clicked, _matched = await self._click_keyboard_by_text_result(
             action,
@@ -2622,7 +2617,7 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
         action: ActionT,
         timeout=None,
         *,
-        next_action: Optional[ActionT] = None,
+        next_action: ActionT | None = None,
     ):
         if timeout is None:
             timeout = _read_positive_float_env("SIGN_TASK_ACTION_TIMEOUT", 25.0, 5.0)
@@ -2894,9 +2889,9 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
     async def request_callback_answer(
         self,
         client: Client,
-        chat_id: Union[int, str],
+        chat_id: int | str,
         message_id: int,
-        callback_data: Union[str, bytes],
+        callback_data: str | bytes,
         **kwargs,
     ):
         max_retries = 5
@@ -2956,7 +2951,7 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
 
     async def schedule_messages(
         self,
-        chat_id: Union[int, str],
+        chat_id: int | str,
         text: str,
         crontab: str = None,
         next_times: int = 1,

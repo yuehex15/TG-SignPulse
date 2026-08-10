@@ -209,5 +209,5 @@ def get_log_output(
         return {"output": content}
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to read log file: {str(e)}"
+            status_code=500, detail=f"Failed to read log file: {e!s}"
         )

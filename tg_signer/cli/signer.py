@@ -1,7 +1,5 @@
 import asyncio
 import logging
-import os
-from typing import Optional
 
 import click
 from click import Context, HelpFormatter
@@ -42,7 +40,7 @@ class AliasedGroup(click.Group):
 
 
 def get_signer(
-    task_name, ctx_obj: dict, loop: Optional[asyncio.AbstractEventLoop] = None
+    task_name, ctx_obj: dict, loop: asyncio.AbstractEventLoop | None = None
 ):
     signer = UserSigner(
         task_name=task_name,

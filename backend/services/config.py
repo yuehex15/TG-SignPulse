@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from backend.core.config import get_settings
 from backend.utils.names import validate_storage_name
@@ -34,7 +34,7 @@ class ConfigService:
         self.signs_dir.mkdir(parents=True, exist_ok=True)
         self.monitors_dir.mkdir(parents=True, exist_ok=True)
 
-    def list_sign_tasks(self) -> List[str]:
+    def list_sign_tasks(self) -> list[str]:
         """获取所有签到任务名称列表"""
         tasks = []
 
@@ -53,7 +53,7 @@ class ConfigService:
 
         return sorted(set(tasks))  # 去重并排序
 
-    def list_monitor_tasks(self) -> List[str]:
+    def list_monitor_tasks(self) -> list[str]:
         """获取所有监控任务名称列表"""
         tasks = []
 
@@ -66,7 +66,7 @@ class ConfigService:
 
         return sorted(tasks)
 
-    def _find_sign_task_dirs(self, task_name: str) -> List[Path]:
+    def _find_sign_task_dirs(self, task_name: str) -> list[Path]:
         matches = []
         if not self.signs_dir.exists():
             return matches
@@ -86,8 +86,8 @@ class ConfigService:
         return matches
 
     def get_sign_config(
-        self, task_name: str, account_name: Optional[str] = None
-    ) -> Optional[Dict]:
+        self, task_name: str, account_name: str | None = None
+    ) -> dict | None:
         """
         获取签到任务配置
 
@@ -120,7 +120,7 @@ class ConfigService:
         except (json.JSONDecodeError, OSError):
             return None
 
-    def save_sign_config(self, task_name: str, config: Dict) -> bool:
+    def save_sign_config(self, task_name: str, config: dict) -> bool:
         """
         保存签到任务配置
 
@@ -152,7 +152,7 @@ class ConfigService:
             return False
 
     def delete_sign_config(
-        self, task_name: str, account_name: Optional[str] = None
+        self, task_name: str, account_name: str | None = None
     ) -> bool:
         """
         删除签到任务配置
@@ -200,8 +200,8 @@ class ConfigService:
             return False
 
     def export_sign_task(
-        self, task_name: str, account_name: Optional[str] = None
-    ) -> Optional[str]:
+        self, task_name: str, account_name: str | None = None
+    ) -> str | None:
         """
         导出签到任务配置为 JSON 字符串
 
@@ -234,8 +234,8 @@ class ConfigService:
     def import_sign_task(
         self,
         json_str: str,
-        task_name: Optional[str] = None,
-        account_name: Optional[str] = None,
+        task_name: str | None = None,
+        account_name: str | None = None,
     ) -> bool:
         """
         导入签到任务配置
@@ -348,7 +348,7 @@ class ConfigService:
 
     def import_all_configs(
         self, json_str: str, overwrite: bool = False
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         导入所有配置
         """
@@ -420,7 +420,7 @@ class ConfigService:
                     result["errors"].append(f"Failed to import global settings: {e}")
 
             # 导入 AI 配置
-            if "ai" in settings_data and settings_data["ai"]:
+            if settings_data.get("ai"):
                 try:
                     ai_conf = settings_data["ai"]
                     # 注意：如果 masking 处理过 api_key (e.g. ****)，这里需要处理吗？
@@ -455,12 +455,11 @@ class ConfigService:
                 # 由于 sync_jobs 是 async 的，而这里是同步方法，可能不太好直接调。
                 # 但 FastAPI 路由是 async 的，我们可以在路由层调用 sync_jobs。
                 # 这里的职责主要是文件操作。清理 cache 是必须的。
-                pass
             except Exception as e:
                  print(f"Failed to clear cache: {e}")
 
         except (json.JSONDecodeError, KeyError) as e:
-            result["errors"].append(f"Invalid JSON format: {str(e)}")
+            result["errors"].append(f"Invalid JSON format: {e!s}")
 
         return result
 
@@ -470,7 +469,7 @@ class ConfigService:
         """获取 AI 配置文件路径"""
         return self.workdir / ".openai_config.json"
 
-    def get_ai_config(self) -> Optional[Dict]:
+    def get_ai_config(self) -> dict | None:
         """
         获取 AI 配置
 
@@ -490,9 +489,9 @@ class ConfigService:
 
     def save_ai_config(
         self,
-        api_key: Optional[str] = None,
-        base_url: Optional[str] = None,
-        model: Optional[str] = None,
+        api_key: str | None = None,
+        base_url: str | None = None,
+        model: str | None = None,
     ) -> bool:
         """
         保存 AI 配置
@@ -541,7 +540,7 @@ class ConfigService:
         except OSError:
             return False
 
-    async def test_ai_connection(self) -> Dict:
+    async def test_ai_connection(self) -> dict:
         """
         测试 AI 连接
 
@@ -584,7 +583,7 @@ class ConfigService:
                 "message": "未安装 openai 库，请运行: pip install openai",
             }
         except Exception as e:
-            return {"success": False, "message": f"连接失败: {str(e)}"}
+            return {"success": False, "message": f"连接失败: {e!s}"}
 
     # ============ 全局设置 ============
 
@@ -592,7 +591,7 @@ class ConfigService:
         """获取全局设置文件路径"""
         return self.workdir / ".global_settings.json"
 
-    def get_global_settings(self) -> Dict:
+    def get_global_settings(self) -> dict:
         """
         获取全局设置
 
@@ -632,7 +631,7 @@ class ConfigService:
         except (json.JSONDecodeError, OSError):
             return default_settings
 
-    def save_global_settings(self, settings: Dict) -> bool:
+    def save_global_settings(self, settings: dict) -> bool:
         """
         保存全局设置
 
@@ -687,7 +686,7 @@ class ConfigService:
         """获取 Telegram API 配置文件路径"""
         return self.workdir / ".telegram_api.json"
 
-    def get_telegram_config(self) -> Dict:
+    def get_telegram_config(self) -> dict:
         """
         获取 Telegram API 配置
 
@@ -763,7 +762,7 @@ class ConfigService:
 
 
 # 创建全局实例
-_config_service: Optional[ConfigService] = None
+_config_service: ConfigService | None = None
 
 
 def get_config_service() -> ConfigService:

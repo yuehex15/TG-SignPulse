@@ -2,13 +2,17 @@ from __future__ import annotations
 
 import os
 import secrets
+from collections.abc import Mapping
 from functools import lru_cache
 from pathlib import Path
-from typing import Mapping, Optional
 
 from pydantic import BaseModel, Field
 
-from backend.utils.storage import get_initial_data_dir, get_writable_base_dir, secure_write_text
+from backend.utils.storage import (
+    get_initial_data_dir,
+    get_writable_base_dir,
+    secure_write_text,
+)
 
 
 def _load_env_file(path: Path) -> dict[str, str]:
@@ -42,8 +46,8 @@ def _merged_env() -> dict[str, str]:
 def _read_env(
     env: Mapping[str, str],
     *names: str,
-    default: Optional[str] = None,
-) -> Optional[str]:
+    default: str | None = None,
+) -> str | None:
     for name in names:
         value = str(env.get(name, "")).strip()
         if value:
@@ -73,14 +77,14 @@ def _read_bool_env(env: Mapping[str, str], *names: str, default: bool) -> bool:
     return default
 
 
-def _read_path_env(env: Mapping[str, str], *names: str) -> Optional[Path]:
+def _read_path_env(env: Mapping[str, str], *names: str) -> Path | None:
     raw = _read_env(env, *names)
     if raw is None:
         return None
     return Path(raw).expanduser()
 
 
-def get_default_secret_key(env: Optional[Mapping[str, str]] = None) -> str:
+def get_default_secret_key(env: Mapping[str, str] | None = None) -> str:
     env_map = env or os.environ
     env_secret = _read_env(env_map, "APP_SECRET_KEY")
     if env_secret:
@@ -124,13 +128,13 @@ class Settings(BaseModel):
     trust_proxy_headers: bool = False
     timezone: str = "Asia/Shanghai"
     data_dir: Path = Field(default_factory=get_initial_data_dir)
-    db_path: Optional[Path] = None
-    signer_workdir: Optional[Path] = None
-    session_dir: Optional[Path] = None
-    logs_dir: Optional[Path] = None
+    db_path: Path | None = None
+    signer_workdir: Path | None = None
+    session_dir: Path | None = None
+    logs_dir: Path | None = None
 
     @classmethod
-    def from_environment(cls) -> "Settings":
+    def from_environment(cls) -> Settings:
         env = _merged_env()
         return cls(
             app_name=_read_env(env, "APP_APP_NAME", "APP_NAME", default="TG-SignPulse"),
@@ -196,6 +200,6 @@ class Settings(BaseModel):
         ]
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     return Settings.from_environment()

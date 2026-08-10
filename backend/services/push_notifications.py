@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 from urllib.parse import quote
 
 import httpx
@@ -9,7 +9,7 @@ import httpx
 logger = logging.getLogger("backend.push_notifications")
 
 
-def _as_int_or_none(value: Any) -> Optional[int]:
+def _as_int_or_none(value: Any) -> int | None:
     try:
         if value is None or str(value).strip() == "":
             return None
@@ -23,9 +23,9 @@ async def send_telegram_bot_message(
     bot_token: str,
     chat_id: str,
     text: str,
-    message_thread_id: Optional[int] = None,
+    message_thread_id: int | None = None,
 ) -> None:
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "chat_id": chat_id,
         "text": text[:3900],
         "disable_web_page_preview": False,
@@ -41,7 +41,7 @@ async def send_telegram_bot_message(
         response.raise_for_status()
 
 
-async def send_keyword_push(settings: Dict[str, Any], payload: Dict[str, Any]) -> None:
+async def send_keyword_push(settings: dict[str, Any], payload: dict[str, Any]) -> None:
     channel = (settings.get("keyword_monitor_push_channel") or "telegram").strip()
     title = str(payload.get("title") or "TG-SignPulse 关键词命中")
     body = str(payload.get("body") or "")
@@ -106,7 +106,7 @@ async def send_keyword_push(settings: Dict[str, Any], payload: Dict[str, Any]) -
 
 
 async def send_login_notification(
-    settings: Dict[str, Any],
+    settings: dict[str, Any],
     *,
     username: str,
     ip_address: str,

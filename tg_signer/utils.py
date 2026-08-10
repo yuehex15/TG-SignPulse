@@ -1,7 +1,5 @@
 import sys
-from typing import Dict, Literal
-
-from typing_extensions import TypeAlias
+from typing import Literal, TypeAlias
 
 NumberingLangT: TypeAlias = Literal[
     "arabic",
@@ -25,7 +23,7 @@ NumberingLangT: TypeAlias = Literal[
     "emoji",
 ]
 
-numbering_systems: Dict[int, Dict[NumberingLangT, str]] = {
+numbering_systems: dict[int, dict[NumberingLangT, str]] = {
     # 基础数字
     1: {
         "arabic": "1",

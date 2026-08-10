@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -20,9 +19,9 @@ router = APIRouter()
 class LoginLogItem(BaseModel):
     id: int
     username: str
-    ip_address: Optional[str] = None
-    user_agent: Optional[str] = None
-    detail: Optional[str] = None
+    ip_address: str | None = None
+    user_agent: str | None = None
+    detail: str | None = None
     success: bool
     created_at: str
 
@@ -32,8 +31,8 @@ class TaskHistoryLogItem(BaseModel):
     account_name: str
     task_name: str
     message: str
-    summary: Optional[str] = None
-    bot_message: Optional[str] = None
+    summary: str | None = None
+    bot_message: str | None = None
     success: bool
     created_at: str
     flow_line_count: int = 0
@@ -42,7 +41,7 @@ class TaskHistoryLogItem(BaseModel):
 class TaskHistoryLogDetailItem(TaskHistoryLogItem):
     flow_logs: list[str] = []
     flow_truncated: bool = False
-    last_target_message: Optional[str] = None
+    last_target_message: str | None = None
 
 
 class ClearLogsResponse(BaseModel):
@@ -56,11 +55,12 @@ class DeleteLogResponse(BaseModel):
     message: str
 
 
-def _normalize_date_filter(date: Optional[str]) -> Optional[datetime]:
+def _normalize_date_filter(date: str | None) -> datetime | None:
     if not date:
         return None
     try:
-        return datetime.strptime(str(date).strip(), "%Y-%m-%d")
+        # naive date matches DB naive-UTC created_at comparison
+        return datetime.strptime(str(date).strip(), "%Y-%m-%d")  # noqa: DTZ007
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -71,16 +71,14 @@ def _normalize_date_filter(date: Optional[str]) -> Optional[datetime]:
 @router.get("/login", response_model=list[LoginLogItem])
 def get_login_logs(
     limit: int = 100,
-    date: Optional[str] = None,
+    date: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     del current_user
 
-    if limit < 1:
-        limit = 1
-    if limit > 500:
-        limit = 500
+    limit = max(limit, 1)
+    limit = min(limit, 500)
 
     filter_date = _normalize_date_filter(date)
     query = db.query(LoginLog)
@@ -138,17 +136,15 @@ def delete_login_log(
 @router.get("/tasks", response_model=list[TaskHistoryLogItem])
 def get_task_logs(
     limit: int = 100,
-    account_name: Optional[str] = None,
-    date: Optional[str] = None,
+    account_name: str | None = None,
+    date: str | None = None,
     current_user: User = Depends(get_current_user),
 ):
     del current_user
     _normalize_date_filter(date)
 
-    if limit < 1:
-        limit = 1
-    if limit > 500:
-        limit = 500
+    limit = max(limit, 1)
+    limit = min(limit, 500)
 
     history = get_sign_task_service().get_filtered_history_logs(
         account_name=account_name,
@@ -163,7 +159,7 @@ def get_task_logs(
             task_name=str(item.get("task_name") or "Unknown Task"),
             message=str(item.get("message") or ""),
             summary=(
-                f"Task: {str(item.get('task_name') or 'Unknown Task')} "
+                f"Task: {item.get('task_name') or 'Unknown Task'!s} "
                 f"{'success' if bool(item.get('success')) else 'failed'}"
             ),
             bot_message=str(item.get("last_target_message") or "").strip()
@@ -199,7 +195,7 @@ def get_task_log_detail(
         task_name=str(detail.get("task_name") or "Unknown Task"),
         message=str(detail.get("message") or ""),
         summary=(
-            f"Task: {str(detail.get('task_name') or 'Unknown Task')} "
+            f"Task: {detail.get('task_name') or 'Unknown Task'!s} "
             f"{'success' if bool(detail.get('success')) else 'failed'}"
         ),
         bot_message=str(detail.get("last_target_message") or "").strip()

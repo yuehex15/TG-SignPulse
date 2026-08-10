@@ -4,20 +4,19 @@ import math
 import time
 from collections import deque
 from threading import Lock
-from typing import Deque, Dict, Tuple
 
 from fastapi import HTTPException, Request, status
 
 from backend.core.config import get_settings
 
-BucketKey = Tuple[str, str]
+BucketKey = tuple[str, str]
 
 
 class InMemoryRateLimiter:
     def __init__(self) -> None:
         self._lock = Lock()
-        self._attempts: Dict[BucketKey, Deque[float]] = {}
-        self._blocked_until: Dict[BucketKey, float] = {}
+        self._attempts: dict[BucketKey, deque[float]] = {}
+        self._blocked_until: dict[BucketKey, float] = {}
 
     def reset(self, scope: str, key: str) -> None:
         bucket = (scope, key)
