@@ -24,31 +24,14 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential tzdata gosu && \
   rm -rf /var/lib/apt/lists/*
 
-# Copy minimal metadata first for better layer caching.
-COPY pyproject.toml ./
-COPY tg_signer/__init__.py ./tg_signer/__init__.py
-
-# Install core deps (FastAPI uses Pydantic v1 here).
-RUN pip install --no-cache-dir "pydantic<2" "fastapi==0.109.2"
-
-# Install bcrypt early to keep backend requirements consistent.
-RUN pip install --no-cache-dir "bcrypt==4.0.1"
-
-# Install project and runtime deps.
-COPY README.md pyproject.toml pyotp.py /app/
+# Copy project metadata and sources, then install once.
+# Use official python-jose / pyotp from PyPI (no local jose/pyotp shims).
+COPY README.md pyproject.toml /app/
 COPY backend /app/backend
 COPY tg_signer /app/tg_signer
-COPY jose /app/jose
+
 RUN pip install --no-cache-dir . && \
-  pip install --no-cache-dir \
-  uvicorn[standard] \
-  sqlalchemy \
-  "passlib[bcrypt]==1.7.4" \
-  "python-jose[cryptography]" \
-  pyotp \
-  qrcode[pil] \
-  apscheduler \
-  python-multipart
+  pip install --no-cache-dir "bcrypt>=4.0.1,<5"
 
 # Install tgcrypto only on amd64 to avoid arm64 build failures.
 ARG TARGETPLATFORM

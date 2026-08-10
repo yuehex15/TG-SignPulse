@@ -1,22 +1,26 @@
-version: "3.9"
+# Local image build variant of docker-compose.yml
+# Usage: docker compose -f docker-compose.panel.yml up -d --build
 
 services:
   app:
     build: .
-    container_name: tg-signer-panel
-    environment:
-      - APP_HOST=0.0.0.0
-      - APP_PORT=3000
-      - PORT=3000
-      - TZ=Asia/Shanghai
+    image: tg-signpulse:local
+    container_name: tg-signpulse
     ports:
-      - "3000:3000"
+      - "8080:8080"
     volumes:
       - ./data:/data
+    environment:
+      - PORT=8080
+      - APP_DATA_DIR=/data
+      - TZ=Asia/Shanghai
+      - APP_SECRET_KEY=${APP_SECRET_KEY:-change-me-please-use-openssl-rand}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
     init: true
     read_only: true
     tmpfs:
       - /tmp
+      - /app/__pycache__
     security_opt:
       - no-new-privileges:true
     cap_drop:

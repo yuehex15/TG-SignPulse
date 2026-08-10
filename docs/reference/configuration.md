@@ -6,12 +6,12 @@
 |------|--------|------|------|
 | `APP_SECRET_KEY` | 自动生成并落盘 | ✅ 生产必设 | 面板 JWT 密钥 |
 | `ADMIN_PASSWORD` | 随机生成 | ✅ 建议设置 | 首次启动时 `admin` 的初始密码 |
-| `APP_CORS_ALLOW_ORIGINS` | `http://127.0.0.1:3000,http://localhost:3000` | | 允许访问后端 API 的前端来源（逗号分隔） |
+| `APP_CORS_ALLOW_ORIGINS` | `http://127.0.0.1:8080,http://localhost:8080,http://127.0.0.1:5173,http://localhost:5173` | | 允许访问后端 API 的前端来源（逗号分隔） |
 | `APP_DATA_DIR` | `/data` | | 数据目录 |
-| `APP_HOST` | `127.0.0.1` | | 本地直接运行时的监听地址 |
-| `APP_PORT` | `3000` | | 本地直接运行时的监听端口 |
-| `PORT` | `8080` | | Docker 容器内实际监听端口 |
-| `TZ` | `Asia/Hong_Kong` (本地) / `Asia/Shanghai` (容器) | | 时区，影响任务调度 |
+| `APP_WEB_DIR` | `/web` | | 前端静态资源目录（Docker 镜像默认 `/web`） |
+| `APP_HOST` | `0.0.0.0` | | 本地直接运行时的监听地址 |
+| `APP_PORT` / `PORT` | `8080` | | 监听端口（容器与本地统一） |
+| `TZ` | `Asia/Shanghai` | | 时区，影响任务调度 |
 | `APP_TOTP_VALID_WINDOW` | `1` | | 面板 2FA 时间窗口容差（0=仅当前30s） |
 | `APP_ACCESS_TOKEN_EXPIRE_HOURS` | `12` | | JWT Token 过期时间（小时） |
 

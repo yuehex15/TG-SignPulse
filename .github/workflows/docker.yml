@@ -41,6 +41,14 @@ jobs:
               echo "${image}:latest"
               echo "EOF"
             } >> "${GITHUB_OUTPUT}"
+          elif [[ "${GITHUB_REF_NAME}" == "${{ github.event.repository.default_branch }}" ]]; then
+            {
+              echo "tags<<EOF"
+              echo "${image}:latest"
+              echo "${image}:main"
+              echo "${image}:sha-${short_sha}"
+              echo "EOF"
+            } >> "${GITHUB_OUTPUT}"
           else
             safe_ref="$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed 's#[^a-z0-9._-]#-#g')"
             {

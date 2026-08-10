@@ -108,17 +108,21 @@ def get_default_secret_key(env: Optional[Mapping[str, str]] = None) -> str:
     return generated
 
 
+_DEFAULT_CORS = (
+    "http://127.0.0.1:8080,http://localhost:8080,"
+    "http://127.0.0.1:5173,http://localhost:5173"
+)
+
+
 class Settings(BaseModel):
-    app_name: str = "tg-signer-panel"
-    host: str = "127.0.0.1"
-    port: int = 3000
-    cors_allow_origins_raw: str = (
-        "http://127.0.0.1:3000,http://localhost:3000"
-    )
+    app_name: str = "TG-SignPulse"
+    host: str = "0.0.0.0"
+    port: int = 8080
+    cors_allow_origins_raw: str = _DEFAULT_CORS
     secret_key: str = Field(default_factory=get_default_secret_key)
     access_token_expire_hours: int = 12
     trust_proxy_headers: bool = False
-    timezone: str = "Asia/Hong_Kong"
+    timezone: str = "Asia/Shanghai"
     data_dir: Path = Field(default_factory=get_initial_data_dir)
     db_path: Optional[Path] = None
     signer_workdir: Optional[Path] = None
@@ -129,13 +133,13 @@ class Settings(BaseModel):
     def from_environment(cls) -> "Settings":
         env = _merged_env()
         return cls(
-            app_name=_read_env(env, "APP_APP_NAME", "APP_NAME", default="tg-signer-panel"),
-            host=_read_env(env, "APP_HOST", default="127.0.0.1"),
-            port=_read_int_env(env, "APP_PORT", default=3000),
+            app_name=_read_env(env, "APP_APP_NAME", "APP_NAME", default="TG-SignPulse"),
+            host=_read_env(env, "APP_HOST", default="0.0.0.0"),
+            port=_read_int_env(env, "APP_PORT", "PORT", default=8080),
             cors_allow_origins_raw=_read_env(
                 env,
                 "APP_CORS_ALLOW_ORIGINS",
-                default="http://127.0.0.1:3000,http://localhost:3000",
+                default=_DEFAULT_CORS,
             ),
             secret_key=get_default_secret_key(env),
             access_token_expire_hours=_read_int_env(
@@ -148,7 +152,7 @@ class Settings(BaseModel):
                 "APP_TRUST_PROXY_HEADERS",
                 default=False,
             ),
-            timezone=_read_env(env, "TZ", "APP_TIMEZONE", default="Asia/Hong_Kong"),
+            timezone=_read_env(env, "TZ", "APP_TIMEZONE", default="Asia/Shanghai"),
             data_dir=_read_path_env(env, "APP_DATA_DIR") or get_initial_data_dir(),
             db_path=_read_path_env(env, "APP_DB_PATH"),
             signer_workdir=_read_path_env(env, "APP_SIGNER_WORKDIR"),
@@ -184,7 +188,12 @@ class Settings(BaseModel):
             for item in str(self.cors_allow_origins_raw or "").split(",")
             if item.strip()
         ]
-        return origins or ["http://127.0.0.1:3000", "http://localhost:3000"]
+        return origins or [
+            "http://127.0.0.1:8080",
+            "http://localhost:8080",
+            "http://127.0.0.1:5173",
+            "http://localhost:5173",
+        ]
 
 
 @lru_cache()

@@ -154,5 +154,10 @@ next-dev.*.log
 bandit_report*.json
 ruff_errors.txt
 git_show_head*.txt
-test_*.py
 
+# Local ad-hoc scripts (keep formal tests/ tracked)
+/_test*.py
+run-web/
+run-data2/
+frontend/dist/
+run-data/

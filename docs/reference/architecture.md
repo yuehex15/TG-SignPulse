@@ -4,7 +4,7 @@
 
 TG-SignPulse 由四个核心层组成：
 
-1. Next.js 前端面板
+1. Vue 3 前端面板（Vite + PWA）
 2. FastAPI 后端 API
 3. 调度与任务服务
 4. `tg_signer` Telegram 执行引擎
@@ -23,8 +23,10 @@ TG-SignPulse 由四个核心层组成：
 开发模式默认运行在：
 
 ```text
-http://127.0.0.1:3000
+http://127.0.0.1:5173
 ```
+
+生产/单容器模式下，构建产物由后端从 `APP_WEB_DIR`（默认 `/web`）托管，与 API 同端口（默认 `8080`）。
 
 ## 后端 API
 

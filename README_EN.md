@@ -13,11 +13,11 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/yuehex15/tg-signpulse/releases"><img src="https://img.shields.io/badge/version-v1.0.0-blue" alt="Version"></a>
-  <a href="https://github.com/yuehex15/tg-signpulse/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-BSD--3--Clause-green" alt="License"></a>
+  <a href="https://github.com/yuehex15/TG-SignPulse/releases"><img src="https://img.shields.io/badge/version-v1.0.1-blue" alt="Version"></a>
+  <a href="https://github.com/yuehex15/TG-SignPulse/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-BSD--3--Clause-green" alt="License"></a>
   <img src="https://img.shields.io/badge/python-3.10--3.13-blue" alt="Python">
   <img src="https://img.shields.io/badge/node-20+-green" alt="Node.js">
-  <a href="https://github.com/yuehex15/tg-signpulse/pkgs/container/tg-signpulse"><img src="https://img.shields.io/badge/ghcr.io-available-purple" alt="GHCR"></a>
+  <a href="https://github.com/yuehex15/TG-SignPulse/pkgs/container/tg-signpulse"><img src="https://img.shields.io/badge/ghcr.io-available-purple" alt="GHCR"></a>
 </p>
 
 <p align="center">
@@ -189,10 +189,16 @@ See [Configuration Reference](docs/reference/configuration.md) for the full list
 # Backend
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -e ".[dev]"
-uvicorn backend.main:app --reload --port 8080
+pip install -e ".[dev]"    # or: uv pip install -e ".[dev]"
+# Optional: build frontend so one process serves UI + API
+cd frontend && npm ci && npm run build && cd ..
+export APP_WEB_DIR="$PWD/frontend/dist"
+export APP_DATA_DIR="$PWD/data"
+export APP_SECRET_KEY=dev-secret
+export ADMIN_PASSWORD=admin123
+uvicorn backend.main:app --reload --host 0.0.0.0 --port 8080
 
-# Frontend
+# Frontend HMR (separate terminal; Vite proxies /api to 8080)
 cd frontend
 npm ci
 npm run dev
@@ -201,6 +207,8 @@ npm run dev
 - Python 3.10–3.13 (3.12 recommended)
 - Node.js 20+
 - Python 3.14+ is not recommended (Telegram runtime deps not yet compatible)
+- Local image build: `docker compose -f docker-compose.panel.yml up -d --build`
+- Smoke tests: `pytest -q`
 
 ---
 
@@ -214,6 +222,15 @@ curl http://127.0.0.1:8080/readyz    # Readiness check
 ---
 
 ## Changelog
+
+### v1.0.1 (2026-08-10)
+
+**Release & engineering fixes**
+- Fix local install (`pip install -e ".[dev]"`), Compose secrets, and panel build compose
+- Unify defaults: port `8080`, CORS, timezone `Asia/Shanghai`; drop Next.js leftovers; add `APP_WEB_DIR`
+- Remove local `jose`/`pyotp` shims; use official PyPI packages
+- Add CI smoke (frontend build + backend pytest); push GHCR `:latest` on main/tag
+- Public repo + `v1.0.1` release pipeline
 
 ### v1.0.0 (2026-05-16)
 

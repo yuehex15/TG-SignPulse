@@ -13,11 +13,11 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/yuehex15/tg-signpulse/releases"><img src="https://img.shields.io/badge/version-v1.0.0-blue" alt="Version"></a>
-  <a href="https://github.com/yuehex15/tg-signpulse/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-BSD--3--Clause-green" alt="License"></a>
+  <a href="https://github.com/yuehex15/TG-SignPulse/releases"><img src="https://img.shields.io/badge/version-v1.0.1-blue" alt="Version"></a>
+  <a href="https://github.com/yuehex15/TG-SignPulse/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-BSD--3--Clause-green" alt="License"></a>
   <img src="https://img.shields.io/badge/python-3.10--3.13-blue" alt="Python">
   <img src="https://img.shields.io/badge/node-20+-green" alt="Node.js">
-  <a href="https://github.com/yuehex15/tg-signpulse/pkgs/container/tg-signpulse"><img src="https://img.shields.io/badge/ghcr.io-available-purple" alt="GHCR"></a>
+  <a href="https://github.com/yuehex15/TG-SignPulse/pkgs/container/tg-signpulse"><img src="https://img.shields.io/badge/ghcr.io-available-purple" alt="GHCR"></a>
 </p>
 
 <p align="center">
@@ -191,10 +191,16 @@ TG-SignPulse/
 # 后端
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -e ".[dev]"
-uvicorn backend.main:app --reload --port 8080
+pip install -e ".[dev]"    # 或: uv pip install -e ".[dev]"
+# 可选：先构建前端静态资源，单进程同时提供 UI
+cd frontend && npm ci && npm run build && cd ..
+export APP_WEB_DIR="$PWD/frontend/dist"
+export APP_DATA_DIR="$PWD/data"
+export APP_SECRET_KEY=dev-secret
+export ADMIN_PASSWORD=admin123
+uvicorn backend.main:app --reload --host 0.0.0.0 --port 8080
 
-# 前端
+# 前端热更新（另开终端；Vite 将 /api 代理到 8080）
 cd frontend
 npm ci
 npm run dev
@@ -203,6 +209,8 @@ npm run dev
 - Python 3.10–3.13（推荐 3.12）
 - Node.js 20+
 - 不建议使用 Python 3.14+（Telegram 运行时依赖尚未兼容）
+- 本地构建镜像：`docker compose -f docker-compose.panel.yml up -d --build`
+- 冒烟测试：`pytest -q`
 
 ---
 
@@ -216,6 +224,15 @@ curl http://127.0.0.1:8080/readyz    # 服务就绪检查
 ---
 
 ## 更新日志
+
+### v1.0.1 (2026-08-10)
+
+**发布与工程修复**
+- 修正本地开发安装（`pip install -e ".[dev]"`）、Compose 密钥变量与面板构建 compose
+- 统一默认端口 `8080`、CORS、时区 `Asia/Shanghai`；清理 Next.js 残留，支持 `APP_WEB_DIR`
+- 移除本地 `jose`/`pyotp` 阴影实现，统一使用 PyPI 官方依赖
+- 新增 CI 冒烟（前端 build + 后端 pytest），main/tag 推送 GHCR `:latest`
+- 仓库公开与 `v1.0.1` 正式发布链路补齐
 
 ### v1.0.0 (2026-05-16)
 
