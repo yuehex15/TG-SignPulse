@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -18,8 +19,6 @@ from backend.utils.storage import (
     save_data_dir_override,
     secure_write_json,
 )
-
-import logging
 
 logger = logging.getLogger("backend.services.config")
 

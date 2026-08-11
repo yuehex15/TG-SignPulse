@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import logging
 import os
 from pathlib import Path
 
@@ -13,8 +14,6 @@ from backend.utils.tg_session import (
     save_session_string_file,
     set_account_session_string,
 )
-
-import logging
 
 logger = logging.getLogger("tools.migrate_session")
 
@@ -49,7 +48,8 @@ async def _export_session_string(
     try:
         await client.connect()
         return await client.export_session_string()
-    except Exception:
+    except Exception as exc:
+        logger.warning("Failed to export_session_string: %s", exc)
         return None
     finally:
         try:

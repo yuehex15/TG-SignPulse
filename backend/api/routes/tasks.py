@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from pathlib import Path
 
 from fastapi import (
@@ -22,7 +23,6 @@ from backend.scheduler import sync_jobs
 from backend.schemas.task import TaskCreate, TaskOut, TaskUpdate
 from backend.schemas.task_log import TaskLogOut
 from backend.services import tasks as task_service
-import logging
 
 logger = logging.getLogger("backend.api.routes.tasks")
 router = APIRouter()
@@ -148,7 +148,8 @@ async def task_logs_ws(
         if not user:
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
-    except Exception:
+    except Exception as exc:
+        logger.warning("Failed to close: %s", exc)
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 

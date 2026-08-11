@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 from pathlib import Path
 from typing import Any
@@ -9,7 +10,6 @@ from typing import Any
 from backend.core.config import get_settings
 from backend.utils.storage import secure_write_text
 from backend.utils.time import utc_now_iso
-import logging
 
 logger = logging.getLogger("backend.utils.tg_session")
 _SESSION_MODE_ENV = "TG_SESSION_MODE"
@@ -81,7 +81,8 @@ def _load_account_store() -> dict:
         return {"accounts": {}}
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
+    except Exception as exc:
+        logger.warning("Failed to loads: %s", exc)
         return {"accounts": {}}
     if not isinstance(data, dict):
         return {"accounts": {}}
@@ -271,7 +272,8 @@ def load_session_string_file(session_dir: Path, account_name: str) -> str | None
         return _export_session_string_from_file(session_dir, account_name)
     try:
         content = path.read_text(encoding="utf-8").strip()
-    except Exception:
+    except Exception as exc:
+        logger.warning("Failed to read_text: %s", exc)
         return None
     return content or None
 
@@ -298,7 +300,8 @@ def _export_session_string_from_file(session_dir: Path, account_name: str) -> st
             row = conn.execute(
                 "SELECT dc_id, api_id, test_mode, auth_key, user_id, is_bot FROM sessions"
             ).fetchone()
-        except Exception:
+        except Exception as exc:
+            logger.warning("Failed to fetchone: %s", exc)
             conn.close()
             return None
 
@@ -332,7 +335,8 @@ def _export_session_string_from_file(session_dir: Path, account_name: str) -> st
             logger.warning("Failed to urlsafe_b64encode: %s", exc)
 
         return session_string
-    except Exception:
+    except Exception as exc:
+        logger.warning("Failed to warning: %s", exc)
         return None
 
 

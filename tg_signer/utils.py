@@ -1,6 +1,6 @@
+import logging
 import sys
 from typing import Literal, TypeAlias
-import logging
 
 logger = logging.getLogger("tg_signer.utils")
 NumberingLangT: TypeAlias = Literal[
@@ -262,7 +262,7 @@ class UserInput:
     def index_str(self):
         return f"{numbering(self.index, self.numbering_lang)}. "
 
-    def __call__(self, prompt: str = None):
+    def __call__(self, prompt: str | None = None):
         r = input(f"{self.index_str}{prompt}")
         self.incr(1)
         return r

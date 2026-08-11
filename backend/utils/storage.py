@@ -46,7 +46,8 @@ def _probe_writable_dir(base: Path) -> bool:
         test_file.write_text("ok", encoding="utf-8")
         test_file.unlink()
         return True
-    except Exception:
+    except Exception as exc:
+        logger.warning("Failed to unlink: %s", exc)
         return False
     finally:
         try:
@@ -78,7 +79,8 @@ def load_data_dir_override() -> Path | None:
         return None
     try:
         value = override_file.read_text(encoding="utf-8").strip()
-    except Exception:
+    except Exception as exc:
+        logger.warning("Failed to read_text: %s", exc)
         return None
     if not value:
         return None

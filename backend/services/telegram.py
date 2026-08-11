@@ -209,7 +209,8 @@ class TelegramService:
 
             self._accounts_cache = sorted(accounts, key=lambda x: x["name"])
             return self._accounts_cache
-        except Exception:
+        except Exception as exc:
+            logger.warning("Failed to _account_status_payload: %s", exc)
             return []
 
     @staticmethod
@@ -246,9 +247,7 @@ class TelegramService:
         if is_string_session_mode():
             if get_account_session_string(account_name):
                 return True
-            if load_session_string_file(self.session_dir, account_name):
-                return True
-            return False
+            return bool(load_session_string_file(self.session_dir, account_name))
 
         session_file = self.session_dir / f"{account_name}.session"
         return session_file.exists()
@@ -276,7 +275,8 @@ class TelegramService:
                 proxy_value = get_config_service().get_global_settings().get("global_proxy")
             if proxy_value:
                 proxy_dict = build_proxy_dict(proxy_value)
-        except Exception:
+        except Exception as exc:
+            logger.warning("Failed to get_global_settings: %s", exc)
             proxy_dict = None
 
         session_mode = get_session_mode()
@@ -344,7 +344,8 @@ class TelegramService:
                 proxy_value = get_config_service().get_global_settings().get("global_proxy")
             if proxy_value:
                 proxy_dict = build_proxy_dict(proxy_value)
-        except Exception:
+        except Exception as exc:
+            logger.warning("Failed to get_global_settings: %s", exc)
             proxy_dict = None
 
         session_mode = get_session_mode()
@@ -437,7 +438,8 @@ class TelegramService:
                 )
             if proxy_value:
                 proxy_dict = build_proxy_dict(proxy_value)
-        except Exception:
+        except Exception as exc:
+            logger.warning("Failed to get_global_settings: %s", exc)
             proxy_dict = None
 
         session_mode = get_session_mode()
@@ -1189,7 +1191,7 @@ class TelegramService:
                     logger.warning("Failed to disconnect: %s", exc)
                 _login_sessions.pop(session_key, None)
                 _release_account_lock()
-            raise e
+            raise
         except Exception as e:
             # 清理 session
             try:
@@ -1231,7 +1233,8 @@ class TelegramService:
             # 即使在 file 模式，也尝试保存 session_string 作为降级方案
             try:
                 session_string = await client.export_session_string()
-            except Exception:
+            except Exception as exc:
+                logger.warning("Failed to export_session_string: %s", exc)
                 session_string = None
             if session_string:
                 try:
@@ -1327,7 +1330,8 @@ class TelegramService:
                     await client.stop()
                 elif getattr(client, "is_connected", False):
                     await client.disconnect()
-            except Exception:
+            except Exception as exc:
+                logger.warning("Failed to disconnect: %s", exc)
                 try:
                     if getattr(client, "is_connected", False):
                         await client.disconnect()
@@ -1518,7 +1522,8 @@ class TelegramService:
                 try:
                     if not getattr(client, "is_initialized", False):
                         await client.initialize()
-                except Exception:
+                except Exception as exc:
+                    logger.warning("Failed to initialize: %s", exc)
                     try:
                         await client.dispatcher.start()
                     except Exception as exc:
@@ -1633,12 +1638,14 @@ class TelegramService:
             try:
                 try:
                     me = await client.get_me()
-                except Exception:
+                except Exception as exc:
+                    logger.warning("Failed to get_me: %s", exc)
                     me = user
 
                 try:
                     password_state = await client.get_password()
-                except Exception:
+                except Exception as exc:
+                    logger.warning("Failed to get_password: %s", exc)
                     password_state = None
 
                 if password_state and getattr(password_state, "has_password", False):
@@ -1678,7 +1685,8 @@ class TelegramService:
                     (acc for acc in accounts if acc.get("name") == account_name),
                     None,
                 )
-            except Exception:
+            except Exception as exc:
+                logger.warning("Failed to get: %s", exc)
                 account = None
 
             return {
@@ -1787,7 +1795,8 @@ class TelegramService:
                                 if api_id and api_hash:
                                     data["api_id"] = api_id
                                     data["api_hash"] = api_hash
-                            except Exception:
+                            except Exception as exc:
+                                logger.warning("Failed to strip: %s", exc)
                                 api_id = None
                                 api_hash = None
 
@@ -1877,7 +1886,8 @@ class TelegramService:
                 "status": "failed",
                 "message": "登录失败，请重试",
             }
-        except Exception:
+        except Exception as exc:
+            logger.warning("Failed to _cleanup_qr_login: %s", exc)
             self._log_qr_state(login_id, "failed", data)
             await self._cleanup_qr_login(login_id)
             return {
@@ -1954,7 +1964,8 @@ class TelegramService:
                     me = user_from_password
                 else:
                     me = await client.get_me()
-            except Exception:
+            except Exception as exc:
+                logger.warning("Failed to get_me: %s", exc)
                 me = user_fallback
 
             await self._apply_migrate_auth(client, data)
@@ -1973,7 +1984,8 @@ class TelegramService:
                     (acc for acc in accounts if acc.get("name") == account_name),
                     None,
                 )
-            except Exception:
+            except Exception as exc:
+                logger.warning("Failed to get: %s", exc)
                 account = None
 
             return {
@@ -2024,7 +2036,8 @@ class TelegramService:
                             data["authorized"] = True
                             self._extend_qr_expires(data)
                             return data.get("authorized_user")
-                        except Exception:
+                        except Exception as exc:
+                            logger.warning("Failed to get: %s", exc)
                             result = None
 
                     if isinstance(result, raw.types.auth.LoginTokenSuccess):
@@ -2066,7 +2079,8 @@ class TelegramService:
                             if api_id and api_hash:
                                 data["api_id"] = api_id
                                 data["api_hash"] = api_hash
-                        except Exception:
+                        except Exception as exc:
+                            logger.warning("Failed to strip: %s", exc)
                             api_id = None
                             api_hash = None
 
@@ -2192,7 +2206,7 @@ class TelegramService:
                         )
                     if data.get("token") != result.token:
                         data["token"] = result.token
-                    raise ValueError("请先在手机端确认登录")
+                    raise ValueError("请先在手机端确认登录")  # noqa: TRY004
 
                 if isinstance(result, raw.types.auth.LoginTokenSuccess):
                     user = types.User._parse(client, result.authorization.user)
@@ -2204,12 +2218,14 @@ class TelegramService:
                     try:
                         try:
                             me = await client.get_me()
-                        except Exception:
+                        except Exception as exc:
+                            logger.warning("Failed to get_me: %s", exc)
                             me = user
 
                         try:
                             password_state = await client.get_password()
-                        except Exception:
+                        except Exception as exc:
+                            logger.warning("Failed to get_password: %s", exc)
                             password_state = None
 
                         if password_state and getattr(password_state, "has_password", False):
@@ -2239,7 +2255,8 @@ class TelegramService:
                             (acc for acc in accounts if acc.get("name") == account_name),
                             None,
                         )
-                    except Exception:
+                    except Exception as exc:
+                        logger.warning("Failed to get: %s", exc)
                         account = None
 
                     return {
@@ -2264,7 +2281,8 @@ class TelegramService:
             raise ValueError("登录失败，请重试")
         except ValueError:
             raise
-        except Exception:
+        except Exception as exc:
+            logger.warning("Failed to _cleanup_qr_login: %s", exc)
             if data and data.get("status") in {"password_required", "scanned_wait_confirm"}:
                 self._extend_qr_expires(data)
                 raise ValueError("登录失败，请重试")
@@ -2328,9 +2346,9 @@ class TelegramService:
                     loop.close()
 
             return result
-        except Exception as e:
+        except Exception:  # noqa: TRY203
             # 重新抛出异常，保留原始错误信息
-            raise e
+            raise
 
 
 # 创建全局实例

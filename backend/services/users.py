@@ -36,7 +36,7 @@ def _get_or_create_bootstrap_password() -> tuple[str, Path]:
     return password, password_file
 
 
-def ensure_admin(db: Session, username: str = "admin", password: str = None):
+def ensure_admin(db: Session, username: str = "admin", password: str | None = None):
     """
     仅在用户表为空时创建一个默认管理员。
     防止用户修改用户名后，系统又自动创建一个默认的 admin 账号。

@@ -111,7 +111,7 @@ def login(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid username or password",
         )
-    if user.totp_secret:
+    if user.totp_secret:  # noqa: SIM102
         if not payload.totp_code or not verify_totp(
             user.totp_secret, payload.totp_code
         ):

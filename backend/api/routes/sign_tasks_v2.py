@@ -24,12 +24,13 @@ try:
 except ImportError:  # pragma: no cover - pydantic v1 compatibility
     from pydantic import BaseModel, Field, validator
     field_validator = None
+import logging
+
 from sqlalchemy.orm import Session
 
 from backend.core.auth import get_current_user, verify_token
 from backend.core.database import get_db
 from backend.services.sign_tasks import get_sign_task_service
-import logging
 
 logger = logging.getLogger("backend.api.routes.sign_tasks_v2")
 router = APIRouter()
@@ -626,7 +627,8 @@ async def get_chat_avatar(
                 cache_file.write_bytes(avatar_bytes)
                 no_avatar_marker.unlink(missing_ok=True)
                 return Response(content=avatar_bytes, media_type="image/jpeg")
-        except Exception:
+        except Exception as exc:
+            logger.warning("Failed to unlink: %s", exc)
             continue
 
     # No account could fetch the avatar - mark as no avatar
@@ -651,7 +653,8 @@ async def sign_task_logs_ws(
         if not user:
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
-    except Exception:
+    except Exception as exc:
+        logger.warning("Failed to close: %s", exc)
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 

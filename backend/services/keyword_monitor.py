@@ -869,11 +869,10 @@ class KeywordMonitorService:
 
     async def _click_inline_button(self, client: Any, message: Message, button: Any) -> bool:
         callback_data = getattr(button, "callback_data", None)
-        if callback_data is not None:
-            if await self._request_callback_answer(
-                client, message.chat.id, message.id, callback_data
-            ):
-                return True
+        if callback_data is not None and await self._request_callback_answer(
+            client, message.chat.id, message.id, callback_data
+        ):
+            return True
 
         click = getattr(message, "click", None)
         if callable(click):

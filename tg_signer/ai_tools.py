@@ -76,7 +76,7 @@ class OpenAIConfigManager:
                 return c
         return None
 
-    def save_config(self, api_key: str, base_url: str = None, model: str = None):
+    def save_config(self, api_key: str, base_url: str | None = None, model: str | None = None):
         config_file = self.get_config_file()
         config = OpenAIConfig(api_key=api_key, base_url=base_url, model=model)
         with open(config_file, "w", encoding="utf-8") as fp:
@@ -120,8 +120,8 @@ class OpenAIConfigManager:
 
 
 def get_openai_client(
-    api_key: str = None,
-    base_url: str = None,
+    api_key: str | None = None,
+    base_url: str | None = None,
     **kwargs,
 ) -> Optional["AsyncOpenAI"]:
     from openai import AsyncOpenAI, OpenAIError
@@ -145,7 +145,7 @@ class AITools:
         query: str,
         options: list[tuple[int, str]],
         client: "AsyncOpenAI" = None,
-        model: str = None,
+        model: str | None = None,
         system_prompt: str | None = None,
         temperature=0.1,
     ) -> int:
@@ -186,7 +186,7 @@ class AITools:
         query: str,
         options: list[tuple[int, str]],
         client: "AsyncOpenAI" = None,
-        model: str = None,
+        model: str | None = None,
         system_prompt: str | None = None,
         temperature=0.1,
     ) -> list[int]:
@@ -238,7 +238,7 @@ class AITools:
         image: bytes,
         query: str = "",
         client: "AsyncOpenAI" = None,
-        model: str = None,
+        model: str | None = None,
         system_prompt: str | None = None,
         temperature=0.1,
     ) -> str:
@@ -273,7 +273,7 @@ class AITools:
         self,
         query: str,
         client: "AsyncOpenAI" = None,
-        model: str = None,
+        model: str | None = None,
         system_prompt: str | None = None,
         temperature=0.1,
     ) -> str:
@@ -298,7 +298,7 @@ class AITools:
         prompt: str,
         query: str,
         client: "AsyncOpenAI" = None,
-        model: str = None,
+        model: str | None = None,
     ) -> str:
         model = model or self.default_model
         client = client or self.client

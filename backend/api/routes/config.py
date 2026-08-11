@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
@@ -11,7 +12,6 @@ from backend.core.auth import get_current_user
 from backend.models.user import User
 from backend.services.config import get_config_service
 from backend.utils.storage import is_writable_dir
-import logging
 
 logger = logging.getLogger("backend.api.routes.config")
 router = APIRouter()

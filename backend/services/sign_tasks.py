@@ -66,7 +66,8 @@ class TaskLogHandler(logging.Handler):
             # 保持日志长度，避免内存占用过大
             if len(self.log_list) > 1000:
                 self.log_list.pop(0)
-        except Exception:
+        except Exception as exc:
+            _service_logger.warning("Failed to pop: %s", exc)
             self.handleError(record)
 
 
@@ -165,7 +166,7 @@ class SignTaskService:
             self._active_tasks.pop(key, None)
 
         # Prune _active_logs for tasks that are no longer running and have no cleanup pending
-        for key in list(self._active_logs.keys()):
+        for key in list(self._active_logs):
             if not self._active_tasks.get(key, False) and key not in self._cleanup_tasks:
                 self._active_logs.pop(key, None)
 
@@ -358,7 +359,8 @@ class SignTaskService:
             if not getattr(app, "is_connected", False) and not getattr(app, "is_initialized", False):
                 # Client already torn down - don't try to re-enter
                 return ""
-        except Exception:
+        except Exception as exc:
+            _service_logger.warning("Failed to operation: %s", exc)
             return ""
 
         try:
@@ -399,7 +401,8 @@ class SignTaskService:
                         ):
                             fallback_text = candidate
                             fallback_timestamp = message_time
-                    except Exception:
+                    except Exception as exc:
+                        _service_logger.warning("Failed to operation: %s", exc)
                         continue
         except Exception as exc:
             # Silently ignore errors like "Client is already terminated"
@@ -419,7 +422,8 @@ class SignTaskService:
             if log_file.stat().st_mtime < limit.timestamp():
                 try:
                     log_file.unlink()
-                except Exception:
+                except Exception as exc:
+                    _service_logger.warning("Failed to unlink: %s", exc)
                     continue
 
     def _safe_history_key(self, name: str) -> str:
@@ -505,7 +509,8 @@ class SignTaskService:
             try:
                 with open(config_file, "r", encoding="utf-8") as f:
                     config = json.load(f)
-            except Exception:
+            except Exception as exc:
+                _service_logger.warning("Failed to load: %s", exc)
                 return None
             if self._infer_account_name(config, legacy_task_dir) == account_name:
                 return legacy_task_dir
@@ -520,7 +525,8 @@ class SignTaskService:
                 nested_task_dir = acc_dir / task_name
                 if acc_dir.is_dir() and (nested_task_dir / "config.json").exists():
                     return nested_task_dir
-        except Exception:
+        except Exception as exc:
+            _service_logger.warning("Failed to is_dir: %s", exc)
             return None
         return None
 
@@ -584,7 +590,8 @@ class SignTaskService:
                     stored_names = config.get("account_names", [])
                     if isinstance(stored_names, list) and "*" in stored_names:
                         seen_wildcard_tasks.append((task_dir.name, config, task_dir))
-                except Exception:
+                except Exception as exc:
+                    _service_logger.warning("Failed to append: %s", exc)
                     continue
 
         # For each wildcard task, ensure all accounts have a directory
@@ -828,7 +835,8 @@ class SignTaskService:
             candidate = text.encode("gbk", errors="strict").decode(
                 "utf-8", errors="strict"
             )
-        except Exception:
+        except Exception as exc:
+            _service_logger.warning("Failed to encode: %s", exc)
             return text
 
         candidate_suspicious = sum(
@@ -866,7 +874,8 @@ class SignTaskService:
         try:
             with open(history_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
-        except Exception:
+        except Exception as exc:
+            _service_logger.warning("Failed to load: %s", exc)
             return []
 
         if isinstance(data, dict):
@@ -906,7 +915,8 @@ class SignTaskService:
         try:
             with open(history_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
-        except Exception:
+        except Exception as exc:
+            _service_logger.warning("Failed to load: %s", exc)
             return []
 
         if isinstance(data, list):
@@ -923,7 +933,8 @@ class SignTaskService:
     ) -> None:
         try:
             task_dir = self._resolve_task_dir(task_name, account_name or None)
-        except Exception:
+        except Exception as exc:
+            _service_logger.warning("Failed to _resolve_task_dir: %s", exc)
             task_dir = None
 
         if task_dir is not None:
@@ -1035,7 +1046,8 @@ class SignTaskService:
                                 or extract_last_target_message(data.get("flow_logs"))
                             )
                             all_history.append(data)
-            except Exception:
+            except Exception as exc:
+                _service_logger.warning("Failed to append: %s", exc)
                 continue
 
         # 按时间倒序
@@ -1267,7 +1279,8 @@ class SignTaskService:
     ) -> None:
         try:
             task_dir = self._resolve_task_dir(task_name, account_name or None)
-        except Exception:
+        except Exception as exc:
+            _service_logger.warning("Failed to _resolve_task_dir: %s", exc)
             task_dir = None
 
         if task_dir is None:
@@ -1375,7 +1388,8 @@ class SignTaskService:
                     data_list = data
                 else:
                     data_list = []
-            except Exception:
+            except Exception as exc:
+                _service_logger.warning("Failed to load: %s", exc)
                 continue
 
             if not data_list:
@@ -1446,7 +1460,8 @@ class SignTaskService:
                 elif isinstance(data, dict):
                     return data
                 return None
-        except Exception:
+        except Exception as exc:
+            _service_logger.warning("Failed to load: %s", exc)
             return None
 
     def _save_run_info(
@@ -1486,7 +1501,8 @@ class SignTaskService:
                         history = data
                     else:
                         history = [data]
-            except Exception:
+            except Exception as exc:
+                _service_logger.warning("Failed to load: %s", exc)
                 history = []
 
         history.insert(0, new_entry)
@@ -1828,7 +1844,8 @@ class SignTaskService:
                 "range_start": config.get("range_start", ""),
                 "range_end": config.get("range_end", ""),
             }
-        except Exception:
+        except Exception as exc:
+            _service_logger.warning("Failed to get: %s", exc)
             return None
 
     def _legacy_get_task(
@@ -1866,7 +1883,8 @@ class SignTaskService:
                 "range_end": config.get("range_end", ""),
                 "notify_on_failure": config.get("notify_on_failure", True),
             }
-        except Exception:
+        except Exception as exc:
+            _service_logger.warning("Failed to get: %s", exc)
             return None
 
     def _legacy_create_task_v1(
@@ -2102,7 +2120,8 @@ class SignTaskService:
                     _service_logger.debug(f"移除调度任务失败: {e}")
 
             return True
-        except Exception:
+        except Exception as exc:
+            _service_logger.warning("Failed to debug: %s", exc)
             return False
 
     def get_task_history_logs(
@@ -2259,7 +2278,8 @@ class SignTaskService:
                     (last_run or {}).get("account_name") or resolved_account_name
                 ),
             )
-        except Exception:
+        except Exception as exc:
+            _service_logger.warning("Failed to get: %s", exc)
             return None
 
     def get_task(
@@ -2568,7 +2588,8 @@ class SignTaskService:
         for config_path in self.signs_dir.glob("*/*/config.json"):
             try:
                 config = json.loads(config_path.read_text(encoding="utf-8"))
-            except Exception:
+            except Exception as exc:
+                _service_logger.warning("Failed to loads: %s", exc)
                 continue
             if not isinstance(config, dict):
                 continue
@@ -2611,7 +2632,8 @@ class SignTaskService:
             )
             try:
                 raw_data = json.loads(history_file.read_text(encoding="utf-8"))
-            except Exception:
+            except Exception as exc:
+                _service_logger.warning("Failed to loads: %s", exc)
                 raw_data = None
 
             if isinstance(raw_data, list):
@@ -2728,7 +2750,8 @@ class SignTaskService:
         try:
             with open(cache_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
-        except Exception:
+        except Exception as exc:
+            _service_logger.warning("Failed to load: %s", exc)
             return {"items": [], "total": 0, "limit": limit, "offset": offset}
 
         if not isinstance(data, list):
@@ -2880,9 +2903,11 @@ class SignTaskService:
             async def _fetch_chats(active_client) -> list[dict[str, Any]]:
                 local_chats: list[dict[str, Any]] = []
                 # 使用上下文管理器处理生命周期和锁
-                async with account_lock:
-                    async with get_global_semaphore():
-                        async with active_client:
+                async with (
+                    account_lock,
+                    get_global_semaphore(),
+                    active_client,
+                ):
                             # 尝试获取用户信息，如果失败说明 session 无效
                             await active_client.get_me()
 
@@ -2909,7 +2934,8 @@ class SignTaskService:
                                             "username": getattr(chat, "username", None),
                                             "type": type_name,
                                         })
-                                    except Exception:
+                                    except Exception as exc:
+                                        _service_logger.warning("Failed to operation: %s", exc)
                                         continue
                             except Exception as e:
                                 logger.warning(
@@ -2944,9 +2970,11 @@ class SignTaskService:
                                                     "username": getattr(chat, "username", None),
                                                     "type": type_name,
                                                 })
-                                            except Exception:
+                                            except Exception as exc:
+                                                _service_logger.warning("Failed to operation: %s", exc)
                                                 continue
-                                    except Exception:
+                                    except Exception as exc:
+                                        _service_logger.warning("Failed to operation: %s", exc)
                                         continue
 
                 return local_chats
@@ -2998,9 +3026,9 @@ class SignTaskService:
 
             return chats
 
-        except Exception as e:
+        except Exception:  # noqa: TRY203
             # client 上下文管理器会自动处理 disconnect/stop，这里只需要处理业务异常
-            raise e
+            raise
 
     async def run_task(self, account_name: str, task_name: str) -> dict[str, Any]:
         """
@@ -3012,7 +3040,7 @@ class SignTaskService:
         return account_name, task_name
 
     def _find_task_keys(self, task_name: str) -> list[tuple[str, str]]:
-        return [key for key in self._active_logs.keys() if key[1] == task_name]
+        return [key for key in self._active_logs if key[1] == task_name]
 
     def get_active_logs(
         self, task_name: str, account_name: str | None = None
@@ -3026,7 +3054,8 @@ class SignTaskService:
                 task_name,
                 account_name,
             )
-        except Exception:
+        except Exception as exc:
+            _service_logger.warning("Failed to get_task_logs: %s", exc)
             monitor_logs = []
 
         if account_name:
@@ -3397,8 +3426,7 @@ class SignTaskService:
                                     f"任务执行超时（{int(task_timeout)}秒），已强制终止"
                                 )
                             except Exception as e:
-                                if "database is locked" in str(e).lower():
-                                    if attempt < max_retries - 1:
+                                if "database is locked" in str(e).lower() and attempt < max_retries - 1:
                                         delay = 3 + (attempt * 3)
                                         self._active_logs[task_key].append(
                                             f"Session 被锁定，{delay} 秒后重试... ({attempt + 1}/{max_retries})"
@@ -3517,7 +3545,8 @@ class SignTaskService:
                         final_logs = list(self._active_logs.get(task_key, []))
                         output_str = "\n".join(final_logs)
                         last_target_message = ""
-                    except Exception:
+                    except Exception as exc:
+                        _service_logger.warning("Failed to join: %s", exc)
                         last_target_message = ""
                 if success and last_target_message:
                     last_reply = last_target_message

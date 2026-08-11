@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 from collections.abc import Callable
 
 from backend.core.config import get_settings
-import logging
 
 logger = logging.getLogger("backend.cli.tasks")
 settings = get_settings()

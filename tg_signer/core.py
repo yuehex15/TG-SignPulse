@@ -388,13 +388,13 @@ class Client(BaseClient):
                             await self.invoke(raw.functions.updates.GetState())
                         except ConnectionError as e:
                             if "already started" not in str(e).lower():
-                                raise e
+                                raise
                         try:
                             if not getattr(self, "is_initialized", False):
                                 await self.initialize()
                         except ConnectionError as e:
                             if "already initialized" not in str(e).lower():
-                                raise e
+                                raise
 
                         # Enable WAL mode after start (redundant with patch but safe)
                         if hasattr(self, "storage") and hasattr(self.storage, "conn"):
@@ -433,7 +433,7 @@ class Client(BaseClient):
                                 await self.stop()
                             except Exception as exc:
                                 logger.warning("Failed to stop: %s", exc)
-                        raise e
+                        raise
             return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -498,7 +498,7 @@ def get_api_config():
     return api_id, api_hash
 
 
-def get_proxy(proxy: str = None):
+def get_proxy(proxy: str | None = None):
     proxy = proxy or os.environ.get("TG_PROXY")
     if proxy:
         r = parse.urlparse(proxy)
@@ -514,12 +514,12 @@ def get_proxy(proxy: str = None):
 
 def get_client(
     name: str = "my_account",
-    proxy: dict = None,
+    proxy: dict | None = None,
     workdir: str | pathlib.Path = ".",
-    session_string: str = None,
+    session_string: str | None = None,
     in_memory: bool = False,
-    api_id: int = None,
-    api_hash: str = None,
+    api_id: int | None = None,
+    api_hash: str | None = None,
     **kwargs,
 ) -> Client:
     proxy = proxy or get_proxy()
@@ -630,15 +630,15 @@ class BaseUserWorker(Generic[ConfigT]):
 
     def __init__(
         self,
-        task_name: str = None,
+        task_name: str | None = None,
         session_dir: str = ".",
         account: str = "my_account",
         proxy=None,
         workdir=None,
-        session_string: str = None,
+        session_string: str | None = None,
         in_memory: bool = False,
-        api_id: int = None,
-        api_hash: str = None,
+        api_id: int | None = None,
+        api_hash: str | None = None,
         no_updates: bool | None = None,
         *,
         loop: asyncio.AbstractEventLoop | None = None,
@@ -813,7 +813,7 @@ class BaseUserWorker(Generic[ConfigT]):
         self.write_config(config)
         return config
 
-    def load_config(self, cfg_cls: type[ConfigT] = None) -> ConfigT:
+    def load_config(self, cfg_cls: type[ConfigT] | None = None) -> ConfigT:
         cfg_cls = cfg_cls or self.cfg_cls
         if not self.config_file.exists():
             config = self.reconfig()
@@ -909,7 +909,7 @@ class BaseUserWorker(Generic[ConfigT]):
         return await self.app.log_out()
 
     async def send_message(
-        self, chat_id: int | str, text: str, delete_after: int = None, **kwargs
+        self, chat_id: int | str, text: str, delete_after: int | None = None, **kwargs
     ):
         """
         发送文本消息
@@ -948,7 +948,7 @@ class BaseUserWorker(Generic[ConfigT]):
         self,
         chat_id: int | str,
         emoji: str = "🎲",
-        delete_after: int = None,
+        delete_after: int | None = None,
         **kwargs,
     ):
         """
@@ -1155,7 +1155,8 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
             with open(cache_file, "r", encoding="utf-8") as fp:
                 data = json.load(fp)
             return data if isinstance(data, list) else []
-        except Exception:
+        except Exception as exc:
+            logger.warning("Failed to load: %s", exc)
             return []
 
     def _find_cached_chat(self, chat_id: int, name: str | None) -> dict | None:
@@ -1174,7 +1175,8 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
                 try:
                     if entry.get("id") in candidate_ids:
                         return entry
-                except Exception:
+                except Exception as exc:
+                    logger.warning("Failed to get: %s", exc)
                     continue
             if name:
                 name_key = name.strip().lower().lstrip("@")
@@ -1206,7 +1208,8 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
                             found = _search_entries(other_data)
                             if found:
                                 return found
-                    except Exception:
+                    except Exception as exc:
+                        logger.warning("Failed to load: %s", exc)
                         continue
         except Exception as exc:
             logger.warning("Failed to operation: %s", exc)
@@ -1220,7 +1223,7 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
         return sign_record_dir / "sign_record.json"
 
     def _ask_actions(
-        self, input_: UserInput, available_actions: list[SupportAction] = None
+        self, input_: UserInput, available_actions: list[SupportAction] | None = None
     ) -> list[ActionT]:
         print_to_user(f"{input_.index_str}开始配置<动作>，请按照实际签到顺序配置。")
         available_actions = available_actions or list(SupportAction)
@@ -1376,7 +1379,8 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
             try:
                 from pyrogram.errors import ChannelInvalid, PeerIdInvalid
                 is_peer_invalid = isinstance(e, (PeerIdInvalid, ChannelInvalid))
-            except Exception:
+            except Exception as exc:
+                logger.warning("Failed to get_chat: %s", exc)
                 is_peer_invalid = any(x in str(e) for x in ("PEER_ID_INVALID", "CHANNEL_INVALID"))
 
             if is_peer_invalid and isinstance(chat.chat_id, int):
@@ -1627,9 +1631,7 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
             _last_sign_at = datetime.fromisoformat(sign_record[last_date_str])
             _cron_it = croniter(self._validate_sign_at(config.sign_at), _last_sign_at)
             _next_run: datetime = _cron_it.next(datetime)
-            if _next_run > now:
-                return False
-            return True
+            return _next_run <= now
 
         try:
             while True:
@@ -1665,8 +1667,8 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
                                 # Already terminated - ignore
                                 pass
 
-                except (OSError, errors.Unauthorized) as e:
-                    logger.exception(e)
+                except (OSError, errors.Unauthorized):
+                    logger.exception("Operation failed")
                     await asyncio.sleep(30)
                     continue
 
@@ -1699,7 +1701,7 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
         return await self.run(num_of_dialogs, only_once=True, force_rerun=True)
 
     async def send_text(
-        self, chat_id: int, text: str, delete_after: int = None, **kwargs
+        self, chat_id: int, text: str, delete_after: int | None = None, **kwargs
     ):
         if self.user is None:
             await self.login(print_chat=False)
@@ -1710,7 +1712,7 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
         self,
         chat_id: str | int,
         emoji: str = "🎲",
-        delete_after: int = None,
+        delete_after: int | None = None,
         **kwargs,
     ):
         if self.user is None:
@@ -2370,7 +2372,7 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
 
     async def _click_inline_button(self, message: Message, btn) -> bool:
         callback_data = getattr(btn, "callback_data", None)
-        if callback_data is not None:
+        if callback_data is not None:  # noqa: SIM102
             if (
                 await self.request_callback_answer(
                     self.app,
@@ -2953,7 +2955,7 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
         self,
         chat_id: int | str,
         text: str,
-        crontab: str = None,
+        crontab: str | None = None,
         next_times: int = 1,
         random_seconds: int = 0,
     ):
@@ -3230,8 +3232,8 @@ class UserMonitor(BaseUserWorker[MonitorConfig]):
                             f"匹配到监控项：{match_cfg.chat_id}",
                             f"消息内容为:\n\n{message.text}",
                         )
-            except IndexError as e:
-                logger.exception(e)
+            except IndexError:
+                logger.exception("Operation failed")
 
     async def get_send_text(self, match_cfg: MatchConfig, message: Message) -> str:
         send_text = match_cfg.get_send_text(message.text)

@@ -349,7 +349,8 @@ async def start_qr_login(
             qr_image = "data:image/png;base64," + base64.b64encode(
                 buf.getvalue()
             ).decode("utf-8")
-        except Exception:
+        except Exception as exc:
+            logger.warning("Failed to decode: %s", exc)
             qr_image = None
 
         return QrLoginStartResponse(
@@ -639,7 +640,8 @@ async def get_account_avatar(
             return Response(content=avatar_bytes, media_type="image/jpeg")
         else:
             no_avatar_marker.write_text("")
-    except Exception:
+    except Exception as exc:
+        logger.warning("Failed to write_text: %s", exc)
         if cache_file.exists():
             return FileResponse(cache_file, media_type="image/jpeg")
         no_avatar_marker.write_text("")

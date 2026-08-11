@@ -3,7 +3,7 @@ from __future__ import annotations
 
 def validate_storage_name(value: str, *, field_name: str) -> str:
     if not isinstance(value, str):
-        raise ValueError(f"{field_name} must be a string")
+        raise TypeError(f"{field_name} must be a string")
 
     cleaned = value.strip()
     if not cleaned:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from datetime import timedelta
 from pathlib import Path
 
@@ -13,7 +14,6 @@ from backend.models.task import Task
 from backend.models.task_log import TaskLog
 from backend.utils.time import utc_now_naive
 from tg_signer.async_utils import create_logged_task
-import logging
 
 logger = logging.getLogger("backend.services.tasks")
 settings = get_settings()
