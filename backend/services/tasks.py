@@ -13,7 +13,9 @@ from backend.models.task import Task
 from backend.models.task_log import TaskLog
 from backend.utils.time import utc_now_naive
 from tg_signer.async_utils import create_logged_task
+import logging
 
+logger = logging.getLogger("backend.services.tasks")
 settings = get_settings()
 
 # 用于实时日志推送的状态跟踪
@@ -48,8 +50,8 @@ def cleanup_old_logs(db: Session, days: int = 3) -> int:
                 p = Path(log.log_path)
                 if p.exists():
                     p.unlink()
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to unlink: %s", exc)
         # 从数据库删除
         db.delete(log)
         count += 1

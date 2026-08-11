@@ -7,6 +7,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+logger = logging.getLogger("backend.utils.storage")
 _BASE_DIR: Path | None = None
 _DATA_DIR_OVERRIDE_FILE_ENV = "APP_DATA_DIR_OVERRIDE_FILE"
 _DEFAULT_DATA_DIR_OVERRIDE_FILE = Path.cwd() / ".tg_signpulse_data_dir"
@@ -51,13 +52,13 @@ def _probe_writable_dir(base: Path) -> bool:
         try:
             if test_file.exists():
                 test_file.unlink()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to unlink: %s", exc)
         try:
             if probe_dir.exists() and not any(probe_dir.iterdir()):
                 probe_dir.rmdir()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to rmdir: %s", exc)
 
 
 def is_writable_dir(path: Path) -> bool:

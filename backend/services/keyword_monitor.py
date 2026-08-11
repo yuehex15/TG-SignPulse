@@ -1754,8 +1754,8 @@ class KeywordMonitorService:
                     except Exception:
                         try:
                             client.remove_handler(*handler_ref)
-                        except Exception:
-                            pass
+                        except Exception as exc:
+                            logger.warning("Failed to remove_handler: %s", exc)
                         logger.warning(
                             "Keyword monitor failed to start for %s",
                             account_name,
@@ -1795,12 +1795,12 @@ class KeywordMonitorService:
             async with lock:
                 try:
                     client.remove_handler(*handler_ref)
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.warning("Failed to remove_handler: %s", exc)
                 try:
                     await client.__aexit__(None, None, None)
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.warning("Failed to __aexit__: %s", exc)
         self._handler_refs = []
         self._rules = []
         self._active_key = ""

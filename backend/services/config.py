@@ -19,6 +19,10 @@ from backend.utils.storage import (
     secure_write_json,
 )
 
+import logging
+
+logger = logging.getLogger("backend.services.config")
+
 settings = get_settings()
 
 
@@ -299,8 +303,8 @@ class ConfigService:
                             if key in all_configs["signs"]:
                                 key = f"{key}_{config.get('account_name', 'default')}"
                             all_configs["signs"][key] = config
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        logger.warning("Failed to get: %s", exc)
 
                 # 2. 扫描账号层
                 if path.is_dir():
@@ -322,8 +326,8 @@ class ConfigService:
                                         key = f"{key}_{str(uuid.uuid4())[:8]}"
 
                                     all_configs["signs"][key] = config
-                            except Exception:
-                                pass
+                            except Exception as exc:
+                                logger.warning("Failed to uuid4: %s", exc)
 
         # 导出所有监控任务
         for task_name in self.list_monitor_tasks():
@@ -695,8 +699,8 @@ class ConfigService:
             try:
                 from backend.utils.tg_session import update_global_semaphore
                 update_global_semaphore(int(concurrency_val))
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to get: %s", exc)
 
         return True
 

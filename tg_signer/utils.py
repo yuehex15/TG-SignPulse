@@ -1,6 +1,8 @@
 import sys
 from typing import Literal, TypeAlias
+import logging
 
+logger = logging.getLogger("tg_signer.utils")
 NumberingLangT: TypeAlias = Literal[
     "arabic",
     "chinese_simple",
@@ -281,5 +283,5 @@ def print_to_user(*args, sep=" ", end="\n", flush=False, **kwargs):
     if flush:
         try:
             stream.flush()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to flush: %s", exc)

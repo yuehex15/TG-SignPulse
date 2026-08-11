@@ -47,8 +47,8 @@ def configure_logger(
     if hasattr(stream, "reconfigure"):
         try:
             stream.reconfigure(encoding="utf-8")
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to reconfigure: %s", exc)
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
 

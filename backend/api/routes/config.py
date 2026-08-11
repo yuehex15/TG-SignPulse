@@ -11,7 +11,9 @@ from backend.core.auth import get_current_user
 from backend.models.user import User
 from backend.services.config import get_config_service
 from backend.utils.storage import is_writable_dir
+import logging
 
+logger = logging.getLogger("backend.api.routes.config")
 router = APIRouter()
 
 
@@ -20,9 +22,9 @@ def _clear_sign_task_cache() -> None:
         from backend.services.sign_tasks import get_sign_task_service
 
         get_sign_task_service()._tasks_cache = None
-    except Exception:
+    except Exception as exc:
         # Best-effort cache invalidation; import should still succeed.
-        pass
+        logger.warning("Failed to operation: %s", exc)
 
 
 class ExportTaskResponse(BaseModel):
@@ -144,8 +146,8 @@ async def import_sign_task(
             from backend.services.keyword_monitor import get_keyword_monitor_service
 
             await get_keyword_monitor_service().restart_from_tasks()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to restart_from_tasks: %s", exc)
 
         return ImportTaskResponse(
             success=True,
@@ -212,8 +214,8 @@ async def import_all_configs(
             from backend.services.keyword_monitor import get_keyword_monitor_service
 
             await get_keyword_monitor_service().restart_from_tasks()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to restart_from_tasks: %s", exc)
 
         return ImportAllResponse(
             signs_imported=int(result.get("signs_imported", 0)),

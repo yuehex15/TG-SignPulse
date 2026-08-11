@@ -29,7 +29,9 @@ from sqlalchemy.orm import Session
 from backend.core.auth import get_current_user, verify_token
 from backend.core.database import get_db
 from backend.services.sign_tasks import get_sign_task_service
+import logging
 
+logger = logging.getLogger("backend.api.routes.sign_tasks_v2")
 router = APIRouter()
 
 
@@ -45,8 +47,8 @@ async def _restart_keyword_monitors() -> None:
         from backend.services.keyword_monitor import get_keyword_monitor_service
 
         await get_keyword_monitor_service().restart_from_tasks()
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("Failed to restart_from_tasks: %s", exc)
 
 
 class ChatConfig(BaseModel):
@@ -596,8 +598,8 @@ async def get_chat_avatar(
             try:
                 import shutil
                 shutil.copy2(legacy_cache_file, cache_file)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to copy2: %s", exc)
             return FileResponse(cache_file, media_type="image/jpeg")
 
     # Try to download avatar - first with the requested account, then fall back
@@ -612,8 +614,8 @@ async def get_chat_avatar(
         for acc in all_accounts:
             if acc and acc != account_name and acc not in accounts_to_try:
                 accounts_to_try.append(acc)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("Failed to append: %s", exc)
 
     for try_account in accounts_to_try:
         try:
@@ -630,8 +632,8 @@ async def get_chat_avatar(
     # No account could fetch the avatar - mark as no avatar
     try:
         no_avatar_marker.write_text("")
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("Failed to write_text: %s", exc)
 
     raise HTTPException(status_code=404, detail="No avatar available")
 
@@ -699,10 +701,10 @@ async def sign_task_logs_ws(
             await asyncio.sleep(0.5)
     except WebSocketDisconnect:
         pass
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("Failed to sleep: %s", exc)
     finally:
         try:
             await websocket.close()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to close: %s", exc)

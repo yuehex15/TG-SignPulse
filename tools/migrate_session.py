@@ -14,6 +14,10 @@ from backend.utils.tg_session import (
     set_account_session_string,
 )
 
+import logging
+
+logger = logging.getLogger("tools.migrate_session")
+
 
 def _resolve_api_credentials() -> tuple[int | None, str | None]:
     tg_config = get_config_service().get_telegram_config()
@@ -50,8 +54,8 @@ async def _export_session_string(
     finally:
         try:
             await client.disconnect()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to disconnect: %s", exc)
 
 
 async def _run_migration(session_dir: Path, accounts: list[str]) -> int:

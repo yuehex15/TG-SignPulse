@@ -5,7 +5,9 @@ import os
 from collections.abc import Callable
 
 from backend.core.config import get_settings
+import logging
 
+logger = logging.getLogger("backend.cli.tasks")
 settings = get_settings()
 
 
@@ -47,8 +49,8 @@ async def async_run_task_cli(
             global_proxy = get_config_service().get_global_settings().get("global_proxy")
             if isinstance(global_proxy, str) and global_proxy.strip():
                 env["TG_PROXY"] = global_proxy.strip()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to strip: %s", exc)
 
     process = await asyncio.create_subprocess_exec(
         *args,

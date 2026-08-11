@@ -201,8 +201,8 @@ def reset_totp(
         from backend.api.routes.user import clear_pending_totp_secret
 
         clear_pending_totp_secret(user.id)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("Failed to commit: %s", exc)
     rate_limiter.reset("auth.reset_totp", reset_key)
 
     if not had_totp_enabled:

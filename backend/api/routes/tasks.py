@@ -22,7 +22,9 @@ from backend.scheduler import sync_jobs
 from backend.schemas.task import TaskCreate, TaskOut, TaskUpdate
 from backend.schemas.task_log import TaskLogOut
 from backend.services import tasks as task_service
+import logging
 
+logger = logging.getLogger("backend.api.routes.tasks")
 router = APIRouter()
 
 
@@ -185,8 +187,8 @@ async def task_logs_ws(
     finally:
         try:
             await websocket.close()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to close: %s", exc)
 
 
 @router.get("/logs/{log_id}/output")

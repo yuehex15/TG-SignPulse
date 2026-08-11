@@ -210,8 +210,8 @@ try:
         try:
             self.conn.execute("PRAGMA journal_mode=WAL")
             self.conn.execute("PRAGMA busy_timeout=30000")
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger("tg-signer").warning("Failed to execute: %s", exc)
 
         if not file_exists:
             self.create()
@@ -222,8 +222,8 @@ try:
         # WAL mode handles fragmentation well enough for session files.
 
     _PyrogramFileStorage.open = _patched_file_storage_open
-except Exception:
-    pass
+except Exception as exc:
+    logging.getLogger("tg-signer").warning("Failed to operation: %s", exc)
 
 # Monkeypatch pyrogram.Client.invoke to add backpressure and retry logic for updates
 _original_invoke = BaseClient.invoke
@@ -415,8 +415,8 @@ class Client(BaseClient):
                             try:
                                 if self.is_connected:
                                     await self.stop()
-                            except Exception:
-                                pass
+                            except Exception as exc:
+                                logger.warning("Failed to stop: %s", exc)
 
                             wait_time = 2 + (attempt * 3)
                             logger.warning(f"Database locked when starting client {self.name}, retrying in {wait_time}s... ({attempt + 1}/{max_retries})")
@@ -431,8 +431,8 @@ class Client(BaseClient):
                             _CLIENT_INSTANCES.pop(self.key, None)
                             try:
                                 await self.stop()
-                            except Exception:
-                                pass
+                            except Exception as exc:
+                                logger.warning("Failed to stop: %s", exc)
                         raise e
             return self
 
@@ -446,8 +446,8 @@ class Client(BaseClient):
                 _CLIENT_REFS[self.key] = 0
                 try:
                     await self.stop()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.warning("Failed to stop: %s", exc)
                 # Remove from cache when no longer in use to prevent memory growth
                 _CLIENT_INSTANCES.pop(self.key, None)
                 _CLIENT_REFS.pop(self.key, None)
@@ -1166,8 +1166,8 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
             candidate_ids.add(-chat_id)
             try:
                 candidate_ids.add(int(f"-100{abs(chat_id)}"))
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to add: %s", exc)
 
         def _search_entries(cache_entries: list[dict]) -> dict | None:
             for entry in cache_entries:
@@ -1208,8 +1208,8 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
                                 return found
                     except Exception:
                         continue
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to operation: %s", exc)
 
         return None
 
@@ -1683,13 +1683,13 @@ class UserSigner(BaseUserWorker[SignConfigV3]):
             if message_handler_ref:
                 try:
                     self.app.remove_handler(*message_handler_ref)
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.warning("Failed to remove_handler: %s", exc)
             if edited_handler_ref:
                 try:
                     self.app.remove_handler(*edited_handler_ref)
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.warning("Failed to remove_handler: %s", exc)
             # Clear context to release message references
             if hasattr(self, 'context') and self.context is not None:
                 self.context.chat_messages.clear()

@@ -401,9 +401,9 @@ class SignTaskService:
                             fallback_timestamp = message_time
                     except Exception:
                         continue
-        except Exception:
+        except Exception as exc:
             # Silently ignore errors like "Client is already terminated"
-            pass
+            _service_logger.warning("Failed to operation: %s", exc)
 
         return best_text or fallback_text
 
@@ -457,8 +457,8 @@ class SignTaskService:
         names = set()
         try:
             names.update(name for name in list_account_names() if name)
-        except Exception:
-            pass
+        except Exception as exc:
+            _service_logger.warning("Failed to update: %s", exc)
 
         try:
             session_dir = settings.resolve_session_dir()
@@ -466,8 +466,8 @@ class SignTaskService:
                 for path in session_dir.glob(pattern):
                     if path.stem:
                         names.add(path.stem)
-        except Exception:
-            pass
+        except Exception as exc:
+            _service_logger.warning("Failed to add: %s", exc)
 
         return sorted(names)
 
@@ -600,8 +600,8 @@ class SignTaskService:
                 try:
                     with open(target_dir / "config.json", "w", encoding="utf-8") as f:
                         json.dump(new_config, f, ensure_ascii=False, indent=2)
-                except Exception:
-                    pass
+                except Exception as exc:
+                    _service_logger.warning("Failed to dump: %s", exc)
 
         self._tasks_cache = None
 
@@ -938,8 +938,8 @@ class SignTaskService:
                         config.pop("last_run", None)
                     with open(config_file, "w", encoding="utf-8") as f:
                         json.dump(config, f, ensure_ascii=False, indent=2)
-                except Exception:
-                    pass
+                except Exception as exc:
+                    _service_logger.warning("Failed to dump: %s", exc)
 
         if self._tasks_cache is not None:
             for task in self._tasks_cache:
@@ -970,8 +970,8 @@ class SignTaskService:
             )
             if monitor_entry:
                 result.append(monitor_entry)
-        except Exception:
-            pass
+        except Exception as exc:
+            _service_logger.warning("Failed to append: %s", exc)
         for item in history[:limit]:
             flow_logs = item.get("flow_logs")
             if not isinstance(flow_logs, list):
@@ -1285,8 +1285,8 @@ class SignTaskService:
             del config["last_run"]
             with open(config_file, "w", encoding="utf-8") as f:
                 json.dump(config, f, ensure_ascii=False, indent=2)
-        except Exception:
-            pass
+        except Exception as exc:
+            _service_logger.warning("Failed to dump: %s", exc)
 
     def clear_all_history_logs(self) -> dict[str, int]:
         removed_files = 0
@@ -1316,13 +1316,13 @@ class SignTaskService:
             try:
                 with open(history_file, "r", encoding="utf-8") as f:
                     removed_entries += self._count_history_entries(json.load(f))
-            except Exception:
-                pass
+            except Exception as exc:
+                _service_logger.warning("Failed to _count_history_entries: %s", exc)
             try:
                 history_file.unlink()
                 removed_files += 1
-            except Exception:
-                pass
+            except Exception as exc:
+                _service_logger.warning("Failed to unlink: %s", exc)
 
         return {"removed_files": removed_files, "removed_entries": removed_entries}
 
@@ -1353,13 +1353,13 @@ class SignTaskService:
                 try:
                     with open(history_file, "r", encoding="utf-8") as f:
                         removed_entries += self._count_history_entries(json.load(f))
-                except Exception:
-                    pass
+                except Exception as exc:
+                    _service_logger.warning("Failed to _count_history_entries: %s", exc)
                 try:
                     history_file.unlink()
                     removed_files += 1
-                except Exception:
-                    pass
+                except Exception as exc:
+                    _service_logger.warning("Failed to unlink: %s", exc)
                 continue
 
             legacy_file = self.run_history_dir / f"{self._safe_history_key(task_name)}.json"
@@ -1382,8 +1382,8 @@ class SignTaskService:
                 try:
                     legacy_file.unlink()
                     removed_files += 1
-                except Exception:
-                    pass
+                except Exception as exc:
+                    _service_logger.warning("Failed to unlink: %s", exc)
                 continue
 
             # legacy 鏂囦欢鍙兘娌℃湁 account_name 锛屾槸鏃х増鍗曡处鍙峰湺鏅?
@@ -1395,8 +1395,8 @@ class SignTaskService:
                 try:
                     legacy_file.unlink()
                     removed_files += 1
-                except Exception:
-                    pass
+                except Exception as exc:
+                    _service_logger.warning("Failed to unlink: %s", exc)
                 continue
 
             kept: list[dict[str, Any]] = []
@@ -1412,14 +1412,14 @@ class SignTaskService:
                 try:
                     legacy_file.unlink()
                     removed_files += 1
-                except Exception:
-                    pass
+                except Exception as exc:
+                    _service_logger.warning("Failed to unlink: %s", exc)
             else:
                 try:
                     with open(legacy_file, "w", encoding="utf-8") as f:
                         json.dump(kept, f, ensure_ascii=False, indent=2)
-                except Exception:
-                    pass
+                except Exception as exc:
+                    _service_logger.warning("Failed to dump: %s", exc)
 
         return {"removed_files": removed_files, "removed_entries": removed_entries}
 
@@ -1553,8 +1553,8 @@ class SignTaskService:
             global_proxy = get_config_service().get_global_settings().get("global_proxy")
             if isinstance(global_proxy, str) and global_proxy.strip():
                 return global_proxy.strip()
-        except Exception:
-            pass
+        except Exception as exc:
+            _service_logger.warning("Failed to strip: %s", exc)
         return None
 
     async def _send_failure_notification(
@@ -2083,8 +2083,8 @@ class SignTaskService:
                 try:
                     with open(task_dir / "config.json", "r") as f:
                         real_account_name = json.load(f).get("account_name")
-                except Exception:
-                    pass
+                except Exception as exc:
+                    _service_logger.warning("Failed to load: %s", exc)
 
         try:
             import shutil
@@ -2123,8 +2123,8 @@ class SignTaskService:
                 )
                 if monitor_entry:
                     result.append(monitor_entry)
-            except Exception:
-                pass
+            except Exception as exc:
+                _service_logger.warning("Failed to append: %s", exc)
 
             for item in history[:limit]:
                 flow_logs = item.get("flow_logs")
@@ -2698,8 +2698,8 @@ class SignTaskService:
             try:
                 with open(cache_file, "r", encoding="utf-8") as f:  # noqa: ASYNC230 - small JSON read, not worth aiofiles
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as exc:
+                _service_logger.warning("Failed to load: %s", exc)
 
         # 如果没有缓存或强制刷新，执行刷新逻辑
         return await self.refresh_account_chats(account_name)
@@ -2795,8 +2795,8 @@ class SignTaskService:
             cache_file = self.signs_dir / account_name / "chats_cache.json"
             if cache_file.exists():
                 cache_file.unlink()
-        except Exception:
-            pass
+        except Exception as exc:
+            _service_logger.warning("Failed to unlink: %s", exc)
 
     async def refresh_account_chats(self, account_name: str) -> list[dict[str, Any]]:
         """
@@ -2965,8 +2965,8 @@ class SignTaskService:
                             from tg_signer.core import close_client_by_name
 
                             await close_client_by_name(account_name, workdir=session_dir)
-                        except Exception:
-                            pass
+                        except Exception as exc:
+                            _service_logger.warning("Failed to operation: %s", exc)
                         used_fallback_session = True
                         retry_kwargs = dict(client_kwargs)
                         retry_kwargs["session_string"] = fallback_session_string
@@ -3462,8 +3462,8 @@ class SignTaskService:
 
                                 if len(last_reply) > 200:
                                     last_reply = last_reply[:197] + "..."
-                            except Exception:
-                                pass
+                            except Exception as exc:
+                                _service_logger.warning("Failed to replace: %s", exc)
                             if last_reply:
                                 break
                     if last_reply:

@@ -851,8 +851,8 @@ class TelegramService:
                 if old_client:
                     try:
                         await old_client.disconnect()
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        logger.warning("Failed to disconnect: %s", exc)
                 keys_to_remove.append(key)
 
         for key in keys_to_remove:
@@ -948,8 +948,8 @@ class TelegramService:
                     try:
                         client.storage.conn.execute("PRAGMA journal_mode=WAL")
                         client.storage.conn.execute("PRAGMA busy_timeout=30000")
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        logger.warning("Failed to execute: %s", exc)
 
                 sent_code = await client.send_code(phone_number)
 
@@ -978,15 +978,15 @@ class TelegramService:
         except PhoneNumberInvalid:
             try:
                 await client.disconnect()
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to disconnect: %s", exc)
             _release_account_lock()
             raise ValueError("手机号格式无效，请使用国际格式（如 +8613800138000）")
         except FloodWait as e:
             try:
                 await client.disconnect()
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to disconnect: %s", exc)
             _release_account_lock()
             raise ValueError(f"请求过于频繁，请等待 {e.value} 秒后重试")
         except Exception as e:
@@ -995,8 +995,8 @@ class TelegramService:
             traceback.print_exc()
             try:
                 await client.disconnect()
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to disconnect: %s", exc)
             _release_account_lock()
 
             error_details = str(e)
@@ -1166,8 +1166,8 @@ class TelegramService:
             # 清理 session
             try:
                 await client.disconnect()
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to disconnect: %s", exc)
             _login_sessions.pop(session_key, None)
             _release_account_lock()
             raise ValueError("验证码错误，请检查验证码是否正确")
@@ -1175,8 +1175,8 @@ class TelegramService:
             # 清理 session
             try:
                 await client.disconnect()
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to disconnect: %s", exc)
             _login_sessions.pop(session_key, None)
             _release_account_lock()
             raise ValueError("验证码已过期，请重新获取")
@@ -1185,8 +1185,8 @@ class TelegramService:
             if "两步验证" not in str(e):
                 try:
                     await client.disconnect()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.warning("Failed to disconnect: %s", exc)
                 _login_sessions.pop(session_key, None)
                 _release_account_lock()
             raise e
@@ -1194,8 +1194,8 @@ class TelegramService:
             # 清理 session
             try:
                 await client.disconnect()
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to disconnect: %s", exc)
             _login_sessions.pop(session_key, None)
             _release_account_lock()
 
@@ -1244,8 +1244,8 @@ class TelegramService:
                         code="OK",
                         needs_relogin=False,
                     )
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.warning("Failed to operation: %s", exc)
         if not proxy:
             from backend.services.config import get_config_service
             global_proxy = get_config_service().get_global_settings().get("global_proxy")
@@ -1283,8 +1283,8 @@ class TelegramService:
             try:
                 await client.storage.dc_id(migrate_dc_id)
                 await client.storage.auth_key(migrate_auth_key)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to auth_key: %s", exc)
 
     @staticmethod
     def _capture_migrate_auth(data: dict[str, Any], session: Any) -> None:
@@ -1297,8 +1297,8 @@ class TelegramService:
                 data["migrate_auth_key"] = auth_key
             if dc_id:
                 data["migrate_dc_id"] = dc_id
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to operation: %s", exc)
 
     async def _cleanup_qr_login(self, login_id: str, preserve_session: bool = False) -> None:
         data = _qr_login_sessions.pop(login_id, None)
@@ -1319,8 +1319,8 @@ class TelegramService:
         if client and handler:
             try:
                 client.remove_handler(*handler)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to remove_handler: %s", exc)
         if client:
             try:
                 if getattr(client, "is_initialized", False):
@@ -1331,8 +1331,8 @@ class TelegramService:
                 try:
                     if getattr(client, "is_connected", False):
                         await client.disconnect()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.warning("Failed to disconnect: %s", exc)
         if not preserve_session:
             session_mode = get_session_mode()
             if session_mode == "file":
@@ -1346,8 +1346,8 @@ class TelegramService:
                                 aux_file = self.session_dir / f"{account_name}{ext}"
                                 if aux_file.exists():
                                     aux_file.unlink()
-                        except Exception:
-                            pass
+                        except Exception as exc:
+                            logger.warning("Failed to unlink: %s", exc)
         lock = data.get("lock")
         if lock and lock.locked():
             lock.release()
@@ -1407,8 +1407,8 @@ class TelegramService:
         # 清理后台客户端
         try:
             await close_client_by_name(account_name, workdir=self.session_dir)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to release: %s", exc)
 
         gc.collect()
 
@@ -1472,8 +1472,8 @@ class TelegramService:
                     try:
                         client.storage.conn.execute("PRAGMA journal_mode=WAL")
                         client.storage.conn.execute("PRAGMA busy_timeout=30000")
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        logger.warning("Failed to execute: %s", exc)
 
                 result = await client.invoke(
                     raw.functions.auth.ExportLoginToken(
@@ -1521,8 +1521,8 @@ class TelegramService:
                 except Exception:
                     try:
                         await client.dispatcher.start()
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        logger.warning("Failed to start: %s", exc)
 
                 async def _raw_handler(_, update, __, ___):
                     if not isinstance(update, raw.types.UpdateLoginToken):
@@ -1546,8 +1546,8 @@ class TelegramService:
 
                 handler = client.add_handler(handlers.RawUpdateHandler(_raw_handler))
                 session_data["handler"] = handler
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to add_handler: %s", exc)
 
             session_data["expire_task"] = create_logged_task(
                 self._expire_qr_login(login_id, expires_ts),
@@ -1564,15 +1564,15 @@ class TelegramService:
         except FloodWait as e:
             try:
                 await client.disconnect()
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to disconnect: %s", exc)
             _release_account_lock()
             raise ValueError(f"请求过于频繁，请等待 {e.value} 秒后重试")
         except Exception as e:
             try:
                 await client.disconnect()
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to disconnect: %s", exc)
             _release_account_lock()
             raise ValueError(f"获取二维码失败: {e!s}")
 
@@ -1747,8 +1747,8 @@ class TelegramService:
                             "expires_at": data.get("expires_at"),
                             "message": "需要 2FA 密码",
                         }
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        logger.warning("Failed to get: %s", exc)
 
                 if isinstance(result, raw.types.auth.LoginTokenSuccess):
                     return await _finalize_login(result)
@@ -1822,8 +1822,8 @@ class TelegramService:
                                             "expires_at": data.get("expires_at"),
                                             "message": "需要 2FA 密码",
                                         }
-                                    except Exception:
-                                        pass
+                                    except Exception as exc:
+                                        logger.warning("Failed to get: %s", exc)
                                 elif isinstance(export_result, raw.types.auth.LoginToken):
                                     token_expires = getattr(export_result, "expires", None)
                                     if token_expires:
@@ -1836,8 +1836,8 @@ class TelegramService:
                                     if export_result.token:
                                         data["token"] = export_result.token
                                     data["status"] = "scanned_wait_confirm"
-                            except Exception:
-                                pass
+                            except Exception as exc:
+                                logger.warning("Failed to operation: %s", exc)
 
             status = (
                 "scanned_wait_confirm"
@@ -2121,8 +2121,8 @@ class TelegramService:
                                     data["authorized"] = True
                                     self._extend_qr_expires(data)
                                     return data.get("authorized_user")
-                                except Exception:
-                                    pass
+                                except Exception as exc:
+                                    logger.warning("Failed to get: %s", exc)
                             elif isinstance(export_result, raw.types.auth.LoginToken):
                                 token_expires = getattr(export_result, "expires", None)
                                 if token_expires:
@@ -2134,8 +2134,8 @@ class TelegramService:
                                     )
                                 if export_result.token:
                                     data["token"] = export_result.token
-                        except Exception:
-                            pass
+                        except Exception as exc:
+                            logger.warning("Failed to operation: %s", exc)
 
                     return data.get("authorized_user")
 
@@ -2226,8 +2226,8 @@ class TelegramService:
 
                     try:
                         await client.disconnect()
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        logger.warning("Failed to disconnect: %s", exc)
 
                     account_name = data.get("account_name")
                     await self._cleanup_qr_login(login_id, preserve_session=True)

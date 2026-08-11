@@ -9,7 +9,9 @@ from typing import Any
 from backend.core.config import get_settings
 from backend.utils.storage import secure_write_text
 from backend.utils.time import utc_now_iso
+import logging
 
+logger = logging.getLogger("backend.utils.tg_session")
 _SESSION_MODE_ENV = "TG_SESSION_MODE"
 _SESSION_MODE_FILE = "file"
 _SESSION_MODE_STRING = "string"
@@ -54,8 +56,8 @@ def _resolve_concurrency_limit() -> int:
         val = settings.get("tg_global_concurrency")
         if val is not None:
             return max(int(val), 1)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("Failed to get: %s", exc)
     return 1
 
 
@@ -289,8 +291,8 @@ def _export_session_string_from_file(session_dir: Path, account_name: str) -> st
         try:
             conn.execute("PRAGMA journal_mode=WAL")
             conn.execute("PRAGMA busy_timeout=10000")
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to execute: %s", exc)
 
         try:
             row = conn.execute(
@@ -326,8 +328,8 @@ def _export_session_string_from_file(session_dir: Path, account_name: str) -> st
         try:
             cache_path = session_string_file_path(session_dir, account_name)
             secure_write_text(cache_path, session_string)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to urlsafe_b64encode: %s", exc)
 
         return session_string
     except Exception:
@@ -346,5 +348,5 @@ def delete_session_string_file(session_dir: Path, account_name: str) -> None:
     if path.exists():
         try:
             path.unlink()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to unlink: %s", exc)

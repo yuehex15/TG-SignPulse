@@ -703,8 +703,8 @@ async def update_account(
             from backend.services.keyword_monitor import get_keyword_monitor_service
 
             await get_keyword_monitor_service().restart_from_tasks()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning(f"Failed to restart keyword monitor for account: {exc}")
 
         updated = next(
             (
