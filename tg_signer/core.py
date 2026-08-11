@@ -3140,7 +3140,7 @@ class UserMonitor(BaseUserWorker[MonitorConfig]):
     async def udp_forward(cls, f: UDPForward, message: Message):
         data = str(message).encode("utf-8")
         loop = asyncio.get_running_loop()
-        transport, protocol = await loop.create_datagram_endpoint(
+        transport, _ = await loop.create_datagram_endpoint(
             lambda: _UDPProtocol(), remote_addr=(f.host, f.port)
         )
         try:

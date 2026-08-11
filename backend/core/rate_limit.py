@@ -45,7 +45,7 @@ class InMemoryRateLimiter:
         with self._lock:
             blocked_until = self._blocked_until.get(bucket, 0.0)
             if blocked_until > now:
-                retry_after = max(int(math.ceil(blocked_until - now)), 1)
+                retry_after = max(math.ceil(blocked_until - now), 1)
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                     detail=detail,

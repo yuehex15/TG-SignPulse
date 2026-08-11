@@ -134,7 +134,7 @@ async def _job_run_sign_task(account_name: str, task_name: str) -> None:
         else:
             logger.error(f"Scheduler: 任务 {task_name} 执行失败: {result.get('error')}")
     except Exception as e:
-        logger.error(f"Scheduler: 运行签到任务 {task_name} 失败: {e}", exc_info=True)
+        logger.exception("Scheduler: 运行签到任务 %s 失败: %s", task_name, e)
 
 
 async def _job_maintenance() -> None:

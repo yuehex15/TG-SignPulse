@@ -304,7 +304,7 @@ def _export_session_string_from_file(session_dir: Path, account_name: str) -> st
             conn.close()
             return None
 
-        dc_id, api_id, test_mode, auth_key, user_id, is_bot = row
+        dc_id, _api_id, test_mode, auth_key, user_id, is_bot = row
         conn.close()
 
         if not auth_key or not user_id:
