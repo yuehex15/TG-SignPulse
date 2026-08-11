@@ -162,8 +162,8 @@ async def lifespan(app: FastAPI):
             from backend.services.keyword_monitor import get_keyword_monitor_service
 
             await get_keyword_monitor_service().stop()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning(f"Failed to stop keyword monitor: {exc}")
         app.state.ready = False
 
 
