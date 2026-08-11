@@ -369,11 +369,25 @@ class ConfigService:
                 task_name = config.get("name")
                 if not task_name:
                     task_name = key.split("@")[0]
+                try:
+                    task_name = validate_storage_name(task_name, field_name="task_name")
+                except ValueError:
+                    result["errors"].append(f"Invalid sign task name: {task_name!r}")
+                    continue
 
                 if not overwrite:
                     account_name = config.get("account_name")
                     exists = False
                     if account_name:
+                        try:
+                            account_name = validate_storage_name(
+                                account_name, field_name="account_name"
+                            )
+                        except ValueError:
+                            result["errors"].append(
+                                f"Invalid account name: {account_name!r}"
+                            )
+                            continue
                         if (self.signs_dir / account_name / task_name).exists():
                             exists = True
                     else:
@@ -384,13 +398,23 @@ class ConfigService:
                         result["signs_skipped"] += 1
                         continue
 
-                if self.save_sign_config(task_name, config):
-                    result["signs_imported"] += 1
-                else:
-                    result["errors"].append(f"Failed to import sign task: {task_name}")
+                try:
+                    if self.save_sign_config(task_name, config):
+                        result["signs_imported"] += 1
+                    else:
+                        result["errors"].append(
+                            f"Failed to import sign task: {task_name}"
+                        )
+                except ValueError as e:
+                    result["errors"].append(f"Invalid sign task: {e}")
 
             # 导入监控任务
-            for task_name, config in data.get("monitors", {}).items():
+            for raw_task_name, config in data.get("monitors", {}).items():
+                try:
+                    task_name = validate_storage_name(raw_task_name, field_name="task_name")
+                except ValueError:
+                    result["errors"].append(f"Invalid monitor task name: {raw_task_name!r}")
+                    continue
                 task_dir = self.monitors_dir / task_name
                 config_file = task_dir / "config.json"
 
