@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Play, FileText, Edit2, Trash2, Plus, QrCode, Phone, Zap } from 'lucide-vue-next'
 import { listAccounts, deleteAccount, checkAccountsStatus } from '../lib/api'
@@ -72,6 +72,8 @@ const loadAvatar = async (acc: any) => {
     })
     if (res.ok) {
       const blob = await res.blob()
+      // Revoke previous blob URL to avoid memory leak
+      if (acc.avatarUrl) URL.revokeObjectURL(acc.avatarUrl)
       acc.avatarUrl = URL.createObjectURL(blob)
     }
   } catch {
@@ -82,6 +84,13 @@ const loadAvatar = async (acc: any) => {
 
 onMounted(() => {
   loadAccounts()
+})
+
+// Revoke all blob URLs on unmount to prevent memory leaks
+onUnmounted(() => {
+  for (const acc of accounts.value) {
+    if (acc.avatarUrl) URL.revokeObjectURL(acc.avatarUrl)
+  }
 })
 
 const handleDelete = async (name: string) => {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { Play, FileText, Edit2, Trash2, Plus, Radio, Clock, Shuffle } from 'lucide-vue-next'
 import { listSignTasks, deleteSignTask, startSignTaskRun, listAccounts } from '../lib/api' 
@@ -132,6 +132,15 @@ onMounted(() => {
   loadAllAccounts()
 })
 
+// Revoke all blob URLs on unmount to prevent memory leaks
+onUnmounted(() => {
+  for (const task of tasks.value) {
+    if (task.chatAvatarUrl && task.chatAvatarUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(task.chatAvatarUrl)
+    }
+  }
+})
+
 const loadChatAvatar = async (task: any, accountName: string, chatId: number) => {
   const token = localStorage.getItem('tg-signer-token') || ''
   // Use chat_id as cache key - avatar is the same regardless of which account fetched it
@@ -161,6 +170,10 @@ const loadChatAvatar = async (task: any, accountName: string, chatId: number) =>
     if (res.ok) {
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
+      // Revoke previous blob URL to avoid memory leak
+      if (task.chatAvatarUrl && task.chatAvatarUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(task.chatAvatarUrl)
+      }
       task.chatAvatarUrl = url
       // Clear no-avatar marker
       localStorage.removeItem(noAvatarKey)
