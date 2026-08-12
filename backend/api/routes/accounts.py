@@ -779,7 +779,8 @@ def clear_recent_account_logs(current_user: User = Depends(get_current_user)):
             message="All logs cleared",
             code="LOGS_CLEARED",
         )
-    except Exception:
+    except Exception as exc:
+        logger.warning("Failed to clear logs: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="CLEAR_LOGS_FAILED",
@@ -843,7 +844,8 @@ def clear_account_logs(
             message="Logs cleared",
             code="LOGS_CLEARED",
         )
-    except Exception:
+    except Exception as exc:
+        logger.warning("Failed to clear logs: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="CLEAR_LOGS_FAILED",
